@@ -1,0 +1,170 @@
+'use client'
+import { useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function NovoImovel() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [fotos, setFotos] = useState<File[]>([])
+  const [form, setForm] = useState({
+    titulo: '', tipo: 'venda', categoria: 'casa',
+    preco: '', area: '', quartos: '', banheiros: '', vagas: '',
+    endereco: '', bairro: '', cidade: 'Cruz Alta', descricao: '',
+    destaque: false, ativo: true
+  })
+
+  function handleChange(e: any) {
+    const { name, value, type, checked } = e.target
+    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  async function handleFotos(e: any) {
+    setFotos(Array.from(e.target.files))
+  }
+
+  async function handleSubmit(e: any) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const urlsFotos: string[] = []
+      for (const foto of fotos) {
+        const nomeArquivo = `${Date.now()}-${foto.name.replace(/\s/g, '-')}`
+        const { data, error } = await supabase.storage.from('fotos-imoveis').upload(nomeArquivo, foto, { cacheControl: '3600', upsert: false })
+        if (!error && data) {
+          const { data: urlData } = supabase.storage.from('fotos-imoveis').getPublicUrl(data.path)
+          urlsFotos.push(urlData.publicUrl)
+        }
+      }
+      const { error } = await supabase.from('imoveis').insert({
+        ...form,
+        preco: Number(form.preco),
+        area: Number(form.area) || null,
+        quartos: Number(form.quartos) || null,
+        banheiros: Number(form.banheiros) || null,
+        vagas: Number(form.vagas) || 0,
+        fotos: urlsFotos
+      })
+      if (error) throw error
+      router.push('/admin/imoveis')
+    } catch (err) {
+      alert('Erro ao salvar. Tente novamente.')
+      setLoading(false)
+    }
+  }
+
+  const input = {width:'100%',background:'#1a1814',border:'1px solid rgba(201,168,76,0.2)',color:'#e8e0d0',padding:'10px 14px',fontSize:'14px',outline:'none',boxSizing:'border-box' as const}
+  const label = {display:'block' as const,fontSize:'11px',letterSpacing:'2px',color:'#6b6355',textTransform:'uppercase' as const,marginBottom:'6px'}
+  const field = {marginBottom:'20px'}
+
+  return (
+    <main style={{background:'#0a0a0a',minHeight:'100vh',fontFamily:'system-ui,sans-serif'}}>
+      <header style={{background:'#0f0e0c',borderBottom:'1px solid rgba(201,168,76,0.2)',padding:'0 32px',height:'64px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'32px'}}>
+          <p style={{fontFamily:'Georgia,serif',fontSize:'18px',color:'#c9a84c'}}>Motta Admin</p>
+          <nav style={{display:'flex',gap:'24px'}}>
+            <Link href="/admin/dashboard" style={{color:'#a09880',fontSize:'12px',textDecoration:'none'}}>Dashboard</Link>
+            <Link href="/admin/imoveis" style={{color:'#e8e0d0',fontSize:'12px',textDecoration:'none'}}>Imóveis</Link>
+            <Link href="/admin/leads" style={{color:'#a09880',fontSize:'12px',textDecoration:'none'}}>Leads</Link>
+          </nav>
+        </div>
+      </header>
+
+      <div style={{maxWidth:'800px',margin:'0 auto',padding:'48px 32px'}}>
+        <p style={{fontSize:'11px',letterSpacing:'4px',color:'#c9a84c',textTransform:'uppercase',marginBottom:'8px'}}>Novo</p>
+        <h1 style={{fontFamily:'Georgia,serif',fontSize:'32px',fontWeight:300,color:'#e8e0d0',marginBottom:'40px'}}>Cadastrar Imóvel</h1>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'20px',marginBottom:'20px'}}>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={label}>Título do imóvel</label>
+              <input name="titulo" value={form.titulo} onChange={handleChange} required style={input} placeholder="Ex: Casa com piscina no Centro" />
+            </div>
+            <div>
+              <label style={label}>Tipo</label>
+              <select name="tipo" value={form.tipo} onChange={handleChange} style={input}>
+                <option value="venda">Venda</option>
+                <option value="aluguel">Aluguel</option>
+              </select>
+            </div>
+            <div>
+              <label style={label}>Categoria</label>
+              <select name="categoria" value={form.categoria} onChange={handleChange} style={input}>
+                <option value="casa">Casa</option>
+                <option value="apartamento">Apartamento</option>
+                <option value="terreno">Terreno</option>
+                <option value="comercial">Comercial</option>
+              </select>
+            </div>
+            <div>
+              <label style={label}>Preço (R$)</label>
+              <input name="preco" value={form.preco} onChange={handleChange} required type="number" style={input} placeholder="450000" />
+            </div>
+            <div>
+              <label style={label}>Área (m²)</label>
+              <input name="area" value={form.area} onChange={handleChange} type="number" style={input} placeholder="200" />
+            </div>
+            <div>
+              <label style={label}>Quartos</label>
+              <input name="quartos" value={form.quartos} onChange={handleChange} type="number" style={input} placeholder="3" />
+            </div>
+            <div>
+              <label style={label}>Banheiros</label>
+              <input name="banheiros" value={form.banheiros} onChange={handleChange} type="number" style={input} placeholder="2" />
+            </div>
+            <div>
+              <label style={label}>Vagas de garagem</label>
+              <input name="vagas" value={form.vagas} onChange={handleChange} type="number" style={input} placeholder="1" />
+            </div>
+            <div>
+              <label style={label}>Bairro</label>
+              <input name="bairro" value={form.bairro} onChange={handleChange} style={input} placeholder="Centro" />
+            </div>
+            <div>
+              <label style={label}>Cidade</label>
+              <input name="cidade" value={form.cidade} onChange={handleChange} style={input} />
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={label}>Endereço completo</label>
+              <input name="endereco" value={form.endereco} onChange={handleChange} style={input} placeholder="Rua das Flores, 123" />
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={label}>Descrição</label>
+              <textarea name="descricao" value={form.descricao} onChange={handleChange} rows={4} style={{...input,resize:'vertical'}} placeholder="Descreva o imóvel..." />
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={label}>Fotos</label>
+              <input type="file" multiple accept="image/*" onChange={handleFotos} style={{...input,padding:'8px'}} />
+              {fotos.length > 0 && <p style={{color:'#6b6355',fontSize:'12px',marginTop:'6px'}}>{fotos.length} foto(s) selecionada(s)</p>}
+            </div>
+            <div style={{display:'flex',gap:'24px'}}>
+              <label style={{display:'flex',alignItems:'center',gap:'8px',color:'#a09880',fontSize:'13px',cursor:'pointer'}}>
+                <input type="checkbox" name="destaque" checked={form.destaque} onChange={handleChange} />
+                Destaque
+              </label>
+              <label style={{display:'flex',alignItems:'center',gap:'8px',color:'#a09880',fontSize:'13px',cursor:'pointer'}}>
+                <input type="checkbox" name="ativo" checked={form.ativo} onChange={handleChange} />
+                Ativo (visível no site)
+              </label>
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:'16px',marginTop:'32px'}}>
+            <button type="submit" disabled={loading} style={{background:'#c9a84c',color:'#0a0a0a',border:'none',padding:'14px 32px',fontSize:'12px',letterSpacing:'3px',textTransform:'uppercase',fontWeight:600,cursor:'pointer'}}>
+              {loading ? 'Salvando...' : 'Salvar Imóvel'}
+            </button>
+            <Link href="/admin/imoveis" style={{background:'transparent',border:'1px solid rgba(201,168,76,0.3)',color:'#a09880',padding:'14px 32px',fontSize:'12px',letterSpacing:'2px',textTransform:'uppercase',textDecoration:'none'}}>
+              Cancelar
+            </Link>
+          </div>
+        </form>
+      </div>
+    </main>
+  )
+}
