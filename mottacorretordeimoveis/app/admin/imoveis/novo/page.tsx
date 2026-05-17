@@ -9,10 +9,21 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+function formatarPreco(valor: string) {
+  const numeros = valor.replace(/\D/g, '')
+  if (!numeros) return ''
+  return Number(numeros).toLocaleString('pt-BR')
+}
+
+function desformatarPreco(valor: string) {
+  return valor.replace(/\D/g, '')
+}
+
 export default function NovoImovel() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [fotos, setFotos] = useState<File[]>([])
+  const [precoDisplay, setPrecoDisplay] = useState('')
   const [form, setForm] = useState({
     titulo: '', tipo: 'venda', categoria: 'casa',
     preco: '', area: '', quartos: '', banheiros: '', vagas: '',
@@ -23,6 +34,12 @@ export default function NovoImovel() {
   function handleChange(e: any) {
     const { name, value, type, checked } = e.target
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  function handlePreco(e: any) {
+    const raw = desformatarPreco(e.target.value)
+    setPrecoDisplay(formatarPreco(raw))
+    setForm(f => ({ ...f, preco: raw }))
   }
 
   async function handleFotos(e: any) {
@@ -61,7 +78,6 @@ export default function NovoImovel() {
 
   const input = {width:'100%',background:'#1a1814',border:'1px solid rgba(201,168,76,0.2)',color:'#e8e0d0',padding:'10px 14px',fontSize:'14px',outline:'none',boxSizing:'border-box' as const}
   const label = {display:'block' as const,fontSize:'11px',letterSpacing:'2px',color:'#6b6355',textTransform:'uppercase' as const,marginBottom:'6px'}
-  const field = {marginBottom:'20px'}
 
   return (
     <main style={{background:'#0a0a0a',minHeight:'100vh',fontFamily:'system-ui,sans-serif'}}>
@@ -69,11 +85,13 @@ export default function NovoImovel() {
         <div style={{display:'flex',alignItems:'center',gap:'32px'}}>
           <p style={{fontFamily:'Georgia,serif',fontSize:'18px',color:'#c9a84c'}}>Motta Admin</p>
           <nav style={{display:'flex',gap:'24px'}}>
-            <Link href="/admin/dashboard" style={{color:'#a09880',fontSize:'12px',textDecoration:'none'}}>Dashboard</Link>
-            <Link href="/admin/imoveis" style={{color:'#e8e0d0',fontSize:'12px',textDecoration:'none'}}>Imóveis</Link>
-            <Link href="/admin/leads" style={{color:'#a09880',fontSize:'12px',textDecoration:'none'}}>Leads</Link>
+            <Link href="/admin/dashboard" style={{color:'#a09880',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Dashboard</Link>
+            <Link href="/admin/imoveis" style={{color:'#e8e0d0',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Imóveis</Link>
+            <Link href="/admin/leads" style={{color:'#a09880',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Leads</Link>
+            <Link href="/admin/configuracoes" style={{color:'#a09880',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Configurações</Link>
           </nav>
         </div>
+        <Link href="/" style={{color:'#6b6355',fontSize:'11px',letterSpacing:'1px',textDecoration:'none'}}>Ver site →</Link>
       </header>
 
       <div style={{maxWidth:'800px',margin:'0 auto',padding:'48px 32px'}}>
@@ -104,7 +122,21 @@ export default function NovoImovel() {
             </div>
             <div>
               <label style={label}>Preço (R$)</label>
-              <input name="preco" value={form.preco} onChange={handleChange} required type="number" style={input} placeholder="450000" />
+              <div style={{position:'relative'}}>
+                <span style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',color:'#6b6355',fontSize:'14px'}}>R$</span>
+                <input
+                  value={precoDisplay}
+                  onChange={handlePreco}
+                  required
+                  style={{...input, paddingLeft:'36px'}}
+                  placeholder="450.000"
+                />
+              </div>
+              {precoDisplay && (
+                <p style={{fontSize:'11px',color:'#c9a84c',marginTop:'4px',letterSpacing:'1px'}}>
+                  R$ {precoDisplay}
+                </p>
+              )}
             </div>
             <div>
               <label style={label}>Área (m²)</label>
