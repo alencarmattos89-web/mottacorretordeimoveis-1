@@ -90,30 +90,52 @@ export default async function Home({ searchParams }: { searchParams: any }) {
 
   return (
     <main style={{ background: '#0a0a0a', minHeight: '100vh', fontFamily: 'system-ui,sans-serif' }}>
+      <style>{`
+        .home-header { padding: 0 32px; }
+        .home-header-logo { height: 52px; }
+        .home-nav-links { display: flex; gap: 32px; }
+        .home-hero { padding: 100px 32px 80px; }
+        .home-hero h1 { font-size: 52px; }
+        .imoveis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: rgba(201,168,76,0.15); }
+        @media (max-width: 768px) {
+          .home-header { padding: 0 16px !important; }
+          .home-header-logo { height: 40px !important; }
+          .home-nav-links { display: none !important; }
+          .home-hero { padding: 60px 16px 48px !important; }
+          .home-hero h1 { font-size: clamp(26px, 7vw, 44px) !important; }
+          .imoveis-section { padding: 40px 16px !important; }
+          .imoveis-grid { grid-template-columns: 1fr !important; }
+          .contato-section { padding: 60px 16px !important; }
+          .footer-home { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
+          .filtros-preco { display: grid; grid-template-columns: 1fr 1fr; }
+        }
+      `}</style>
 
       {cfg.banner_posicao === 'topo' && <Banner />}
 
-      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
-        <img src="/LOGO_transparente_final.png" alt="Motta Corretor" style={{ height: '52px', objectFit: 'contain' }} />
+      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}
+        className="home-header">
+        <img src="/LOGO_transparente_final.png" alt="Motta Corretor" className="home-header-logo" style={{ objectFit: 'contain' }} />
         <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-          <a href="#imoveis" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Imóveis</a>
-          <a href="#contato" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Contato</a>
+          <div className="home-nav-links">
+            <a href="#imoveis" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Imóveis</a>
+            <a href="#contato" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Contato</a>
+          </div>
           <a href={`https://wa.me/${cfg.whatsapp}`} target="_blank" rel="noreferrer" style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>WhatsApp</a>
         </nav>
       </header>
 
       {cfg.banner_posicao === 'abaixo_header' && <Banner />}
 
-      <section style={{
+      <section className="home-hero" style={{
         background: cfg.hero_foto
           ? `linear-gradient(rgba(10,10,10,0.65), rgba(10,10,10,0.65)), url(${cfg.hero_foto}) center/cover no-repeat`
           : '#0f0e0c',
-        padding: '100px 32px 80px',
         textAlign: 'center',
         borderBottom: '1px solid rgba(201,168,76,0.15)'
       }}>
         <p style={{ fontSize: '11px', letterSpacing: '4px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>{cfg.hero_subtitulo}</p>
-        <h1 style={{ fontFamily: 'Georgia,serif', fontSize: '52px', fontWeight: 300, color: '#e8e0d0', lineHeight: 1.2, marginBottom: '12px' }}>{cfg.hero_titulo}</h1>
+        <h1 className="home-hero" style={{ fontFamily: 'Georgia,serif', fontWeight: 300, color: '#e8e0d0', lineHeight: 1.2, marginBottom: '12px' }}>{cfg.hero_titulo}</h1>
         <p style={{ fontSize: '13px', letterSpacing: '2px', color: '#6b6355', marginBottom: '48px', textTransform: 'uppercase' }}>{cfg.hero_descricao}</p>
       </section>
 
@@ -123,7 +145,7 @@ export default async function Home({ searchParams }: { searchParams: any }) {
         </div>
       )}
 
-      <section id="imoveis" style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 32px' }}>
+      <section id="imoveis" className="imoveis-section" style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 32px' }}>
 
         {/* Filtros elegantes — linha única */}
         <div style={{ borderBottom: '1px solid rgba(201,168,76,0.12)', marginBottom: '48px', paddingBottom: '0' }}>
@@ -179,7 +201,7 @@ export default async function Home({ searchParams }: { searchParams: any }) {
         </div>
 
         {imoveis && imoveis.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: '1px', background: 'rgba(201,168,76,0.15)' }}>
+          <div className="imoveis-grid">
             {imoveis.map((imovel) => (
               <CardImovel key={imovel.id} imovel={imovel} />
             ))}
@@ -203,14 +225,14 @@ export default async function Home({ searchParams }: { searchParams: any }) {
         </div>
       )}
 
-      <section id="contato" style={{ background: '#0f0e0c', padding: '80px 32px', textAlign: 'center', borderTop: '1px solid rgba(201,168,76,0.15)' }}>
+      <section id="contato" className="contato-section" style={{ background: '#0f0e0c', padding: '80px 32px', textAlign: 'center', borderTop: '1px solid rgba(201,168,76,0.15)' }}>
         <p style={{ fontSize: '11px', letterSpacing: '4px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>Fale conosco</p>
         <h2 style={{ fontFamily: 'Georgia,serif', fontSize: '36px', fontWeight: 300, color: '#e8e0d0', marginBottom: '8px' }}>Encontrou o imóvel ideal?</h2>
         <p style={{ fontSize: '12px', letterSpacing: '2px', color: '#6b6355', marginBottom: '32px', textTransform: 'uppercase' }}>Entre em contato e agende uma visita</p>
         <a href={`https://wa.me/${cfg.whatsapp}`} target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: '#c9a84c', color: '#0a0a0a', fontSize: '12px', letterSpacing: '3px', padding: '16px 40px', textTransform: 'uppercase', fontWeight: 600, textDecoration: 'none' }}>Falar no WhatsApp</a>
       </section>
 
-      <footer style={{ background: '#070706', padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(201,168,76,0.15)', flexWrap: 'wrap', gap: '16px' }}>
+      <footer className="footer-home" style={{ background: '#070706', padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(201,168,76,0.15)', flexWrap: 'wrap', gap: '16px' }}>
         <img src="/LOGO_transparente_final.png" alt="Motta Corretor" style={{ height: '36px', objectFit: 'contain' }} />
         <div style={{ textAlign: 'right' }}>
           <p style={{ fontSize: '11px', color: '#4a4438', letterSpacing: '1px' }}>{cfg.cidade} · CRECI {cfg.creci}</p>
