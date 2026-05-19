@@ -95,6 +95,23 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
 
   return (
     <main style={{ background: '#0a0a0a', minHeight: '100vh', fontFamily: 'system-ui,sans-serif' }}>
+      <a
+        href="https://wa.me/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="whatsapp-floating"
+        aria-label="Falar no WhatsApp"
+      >
+        <svg
+          className="whatsapp-floating-icon"
+          viewBox="0 0 32 32"
+          aria-hidden="true"
+        >
+          <path d="M16.04 3C8.86 3 3.04 8.82 3.04 16c0 2.29.6 4.53 1.74 6.5L3 29l6.67-1.75A12.93 12.93 0 0 0 16.04 29C23.22 29 29.04 23.18 29.04 16S23.22 3 16.04 3Zm0 23.7c-2.02 0-4-.54-5.72-1.57l-.41-.24-3.96 1.04 1.06-3.86-.27-.43A10.62 10.62 0 0 1 5.35 16c0-5.89 4.8-10.69 10.69-10.69 5.9 0 10.69 4.8 10.69 10.69 0 5.89-4.79 10.7-10.69 10.7Zm5.86-8.02c-.32-.16-1.9-.94-2.2-1.05-.29-.1-.5-.16-.72.16-.21.32-.82 1.05-1 1.27-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.22-.19-.32-.02-.49.14-.65.14-.14.32-.37.48-.56.16-.19.21-.32.32-.53.11-.21.05-.4-.03-.56-.08-.16-.72-1.74-.98-2.38-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.11 1.08-1.11 2.64s1.14 3.07 1.3 3.28c.16.21 2.24 3.42 5.43 4.8.76.33 1.35.52 1.81.67.76.24 1.45.21 2 .13.61-.09 1.9-.78 2.17-1.53.27-.75.27-1.39.19-1.53-.08-.13-.29-.21-.61-.37Z" />
+        </svg>
+      </a>
+
+
       <style>{`
         .home-header { padding: 0 32px; }
         .home-header-logo { height: 52px; }
@@ -147,6 +164,89 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
             padding: 8px 10px !important;
           }
         }
+        /* WhatsApp flutuante */
+        .whatsapp-floating {
+          position: fixed !important;
+          right: 24px !important;
+          bottom: 24px !important;
+          width: 62px !important;
+          height: 62px !important;
+          border-radius: 999px !important;
+          background: #25D366 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          z-index: 9999 !important;
+          box-shadow: 0 18px 38px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.18) inset !important;
+          transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        }
+
+        .whatsapp-floating:hover {
+          transform: translateY(-3px) scale(1.03) !important;
+          box-shadow: 0 22px 46px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.22) inset !important;
+        }
+
+        .whatsapp-floating-icon {
+          width: 34px !important;
+          height: 34px !important;
+          fill: #ffffff !important;
+          display: block !important;
+        }
+
+        @media (max-width: 768px) {
+          .home-header-inner {
+            min-height: 84px !important;
+            padding: 0 16px !important;
+          }
+
+          .home-nav-links {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 0 !important;
+          }
+
+          .home-header-logo {
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            height: 58px !important;
+            width: auto !important;
+            max-width: 185px !important;
+            object-fit: contain !important;
+            z-index: 5 !important;
+          }
+
+          .home-header-inner a:has(.home-header-logo) {
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 5 !important;
+          }
+
+          .home-nav-links > a:first-child {
+            justify-self: start !important;
+            font-size: 13px !important;
+            white-space: nowrap !important;
+            z-index: 6 !important;
+          }
+
+          .whatsapp-floating {
+            right: 18px !important;
+            bottom: 88px !important;
+            width: 58px !important;
+            height: 58px !important;
+          }
+
+          .whatsapp-floating-icon {
+            width: 32px !important;
+            height: 32px !important;
+          }
+        }
+
 
       `}</style>
 
@@ -159,8 +259,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
           <div className="home-nav-links">
             <a href="#imoveis" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Imóveis</a>
 </div>
-          <a href={`https://wa.me/${cfg.whatsapp}`} target="_blank" rel="noreferrer" style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>WhatsApp</a>
-        </nav>
+</nav>
       </header>
 
       {cfg.banner_posicao === 'abaixo_header' && <Banner />}
