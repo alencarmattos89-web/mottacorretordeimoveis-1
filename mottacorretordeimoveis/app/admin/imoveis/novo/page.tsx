@@ -1,8 +1,10 @@
 'use client'
+import { supabase } from '@/lib/supabase'
 import { useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LogoutButton from '@/components/LogoutButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +30,7 @@ export default function NovoImovel() {
     titulo: '', tipo: 'venda', categoria: 'casa',
     preco: '', area: '', quartos: '', banheiros: '', vagas: '',
     endereco: '', bairro: '', cidade: 'Cruz Alta', descricao: '',
-    destaque: false, ativo: true
+    destaque: false, ativo: true, mostrar_preco: true
   })
 
   function handleChange(e: any) {
@@ -43,7 +45,10 @@ export default function NovoImovel() {
   }
 
   async function handleFotos(e: any) {
-    setFotos(Array.from(e.target.files))
+    const arquivos: File[] = Array.from(e.target.files)
+    const invalidos = arquivos.filter(f => f.size > 10 * 1024 * 1024)
+    if (invalidos.length) alert(`${invalidos.length} foto(s) ignoradas: excedem 10MB.`)
+    setFotos(arquivos.filter(f => f.size <= 10 * 1024 * 1024))
   }
 
   async function handleSubmit(e: any) {
@@ -66,7 +71,8 @@ export default function NovoImovel() {
         quartos: Number(form.quartos) || null,
         banheiros: Number(form.banheiros) || null,
         vagas: Number(form.vagas) || 0,
-        fotos: urlsFotos
+        fotos: urlsFotos,
+        mostrar_preco: form.mostrar_preco
       })
       if (error) throw error
       router.push('/admin/imoveis')
@@ -91,7 +97,7 @@ export default function NovoImovel() {
             <Link href="/admin/configuracoes" style={{color:'#a09880',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Configurações</Link>
           </nav>
         </div>
-        <Link href="/" style={{color:'#6b6355',fontSize:'11px',letterSpacing:'1px',textDecoration:'none'}}>Ver site →</Link>
+        <div style={{display:'flex',alignItems:'center',gap:'16px'}}><Link href="/" style={{color:'#6b6355',fontSize:'11px',letterSpacing:'1px',textDecoration:'none'}}>Ver site →</Link><LogoutButton /></div>
       </header>
 
       <div style={{maxWidth:'800px',margin:'0 auto',padding:'48px 32px'}}>
@@ -182,6 +188,10 @@ export default function NovoImovel() {
               </label>
               <label style={{display:'flex',alignItems:'center',gap:'8px',color:'#a09880',fontSize:'13px',cursor:'pointer'}}>
                 <input type="checkbox" name="ativo" checked={form.ativo} onChange={handleChange} />
+              <label style={{display:'flex',alignItems:'center',gap:'8px',color:'#a09880',fontSize:'12px',cursor:'pointer'}}>
+                <input type="checkbox" name="mostrar_preco" checked={form.mostrar_preco} onChange={handleChange} />
+                Exibir preço no site
+              </label>
                 Ativo (visível no site)
               </label>
             </div>

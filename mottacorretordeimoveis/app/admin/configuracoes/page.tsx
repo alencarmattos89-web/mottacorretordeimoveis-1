@@ -1,7 +1,9 @@
 'use client'
+import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
+import LogoutButton from '@/components/LogoutButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

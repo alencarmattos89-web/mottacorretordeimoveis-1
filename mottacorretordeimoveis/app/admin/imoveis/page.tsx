@@ -1,7 +1,9 @@
 'use client'
+import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
+import LogoutButton from '@/components/LogoutButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,7 +50,7 @@ export default function ImoveisAdmin() {
             <Link href="/admin/configuracoes" style={{color:'#a09880',fontSize:'12px',letterSpacing:'1px',textDecoration:'none'}}>Configurações</Link>
           </nav>
         </div>
-        <Link href="/" style={{color:'#6b6355',fontSize:'11px',letterSpacing:'1px',textDecoration:'none'}}>Ver site →</Link>
+        <div style={{display:'flex',alignItems:'center',gap:'16px'}}><Link href="/" style={{color:'#6b6355',fontSize:'11px',letterSpacing:'1px',textDecoration:'none'}}>Ver site →</Link><LogoutButton /></div>
       </header>
 
       <div style={{maxWidth:'1200px',margin:'0 auto',padding:'48px 32px'}}>
