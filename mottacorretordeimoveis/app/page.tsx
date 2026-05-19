@@ -114,7 +114,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
           .footer-home { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
           .filtros-preco { display: grid; grid-template-columns: 1fr 1fr; }
         }
-      `}
         /* Header Motta: Imóveis | Logo | WhatsApp */
         .home-header-inner {
           position: relative !important;
@@ -175,7 +174,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
           }
         }
 
-      </style>
+      `}</style>
 
       {cfg.banner_posicao === 'topo' && <Banner />}
 
