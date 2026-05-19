@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import CardImovel from '@/components/CardImovel'
 
-export default async function Home({ searchParams }: { searchParams: any }) {
+export default async function Home({ searchParams }: { searchParams: Promise<any> }) {
   const { data: config } = await supabase
     .from('configuracoes')
     .select('*')
@@ -25,14 +25,17 @@ export default async function Home({ searchParams }: { searchParams: any }) {
     rodape_texto: '',
   }
 
-  const filtroTipo = searchParams?.tipo || ''
-  const filtroCategoria = searchParams?.categoria || ''
-  const filtroPrecoMax = searchParams?.preco_max || ''
+  const sp = await searchParams
+  const filtroTipo = sp?.tipo || ''
+  const filtroCategoria = sp?.categoria || ''
+  const filtroPrecoMax = sp?.preco_max || ''
+  const filtroBusca = sp?.busca || ''
 
   let query = supabase.from('imoveis').select('*').eq('ativo', true)
   if (filtroTipo) query = query.eq('tipo', filtroTipo)
   if (filtroCategoria) query = query.eq('categoria', filtroCategoria)
   if (filtroPrecoMax) query = query.lte('preco', Number(filtroPrecoMax))
+  if (filtroBusca) query = query.or(`bairro.ilike.%${filtroBusca}%,cidade.ilike.%${filtroBusca}%,titulo.ilike.%${filtroBusca}%`)
 
   if (cfg.ordenacao_imoveis === 'destaque') {
     query = query.order('destaque', { ascending: false }).order('created_at', { ascending: false })
@@ -45,13 +48,14 @@ export default async function Home({ searchParams }: { searchParams: any }) {
   }
 
   const { data: imoveis } = await query
-  const temFiltro = filtroTipo || filtroCategoria || filtroPrecoMax
+  const temFiltro = filtroTipo || filtroCategoria || filtroPrecoMax || filtroBusca
 
   function urlFiltro(params: Record<string, string>) {
     const atual: Record<string, string> = {}
     if (filtroTipo) atual.tipo = filtroTipo
     if (filtroCategoria) atual.categoria = filtroCategoria
     if (filtroPrecoMax) atual.preco_max = filtroPrecoMax
+    if (filtroBusca) atual.busca = filtroBusca
     const merged = { ...atual, ...params }
     const qs = Object.entries(merged).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join('&')
     return qs ? `/?${qs}#imoveis` : '/#imoveis'
@@ -62,6 +66,7 @@ export default async function Home({ searchParams }: { searchParams: any }) {
     if (filtroTipo) atual.tipo = filtroTipo
     if (filtroCategoria) atual.categoria = filtroCategoria
     if (filtroPrecoMax) atual.preco_max = filtroPrecoMax
+    if (filtroBusca) atual.busca = filtroBusca
     delete atual[chave]
     const qs = Object.entries(atual).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join('&')
     return qs ? `/?${qs}#imoveis` : '/#imoveis'
@@ -96,7 +101,7 @@ export default async function Home({ searchParams }: { searchParams: any }) {
         .home-nav-links { display: flex; gap: 32px; }
         .home-hero { padding: 100px 32px 80px; }
         .home-hero h1 { font-size: 52px; }
-        .imoveis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: rgba(201,168,76,0.15); }
+        .imoveis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
         @media (max-width: 768px) {
           .home-header { padding: 0 16px !important; }
           .home-header-logo { height: 40px !important; }
@@ -180,7 +185,7 @@ export default async function Home({ searchParams }: { searchParams: any }) {
           </select>
           <input
             name="busca"
-            defaultValue={searchParams?.busca || ''}
+            defaultValue={sp?.busca || ''}
             className="busca-input"
             placeholder="Bairro ou cidade..."
             autoComplete="off"
@@ -206,6 +211,12 @@ export default async function Home({ searchParams }: { searchParams: any }) {
               <span style={{ fontSize: '11px', padding: '4px 12px', background: 'rgba(201,168,76,0.12)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.25)', letterSpacing: '1px' }}>
                 Até R$ {Number(filtroPrecoMax).toLocaleString('pt-BR')}
                 <Link href={urlRemoveFiltro('preco_max')} style={{ marginLeft: '8px', color: '#6b6355', textDecoration: 'none' }}>✕</Link>
+              </span>
+            )}
+            {filtroBusca && (
+              <span style={{ fontSize: '11px', padding: '4px 12px', background: 'rgba(201,168,76,0.12)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.25)', letterSpacing: '1px' }}>
+                "{filtroBusca}"
+                <Link href={urlRemoveFiltro('busca')} style={{ marginLeft: '8px', color: '#6b6355', textDecoration: 'none' }}>✕</Link>
               </span>
             )}
             <Link href="/#imoveis" style={{ fontSize: '11px', color: '#6b6355', letterSpacing: '1px', textDecoration: 'none', marginLeft: '4px' }}>limpar tudo →</Link>
