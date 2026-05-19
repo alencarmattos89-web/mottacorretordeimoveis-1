@@ -1,11 +1,12 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, DragEvent, FormEvent, CSSProperties, ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+import { aplicarMarcaDagua, type WatermarkSettings } from '@/lib/image-watermark'
 
 type FormState = {
   titulo: string
@@ -313,7 +314,7 @@ function normalizarDetalhes(valor: unknown): DetalhesState {
   return {
     ...detalhesIniciais,
     ...dados,
-    caracteristicas: Array.isArray(dados.caracteristicas) ? dados.caracteristicas : [],
+    caracteristicas: Array.isArray(dados.caracteristicas) ? dados.caracteristicas.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : [],
     aceita_financiamento: Array.isArray(dados.aceita_financiamento) ? dados.aceita_financiamento : [],
     mapa_confirmado: dados.mapa_confirmado === true,
     minha_casa: dados.minha_casa === true,
@@ -337,6 +338,14 @@ export default function EditarImovel() {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [form, setForm] = useState<FormState>(formInicial)
   const [detalhes, setDetalhes] = useState<DetalhesState>(detalhesIniciais)
+  const [watermark, setWatermark] = useState<WatermarkSettings>({
+    ativo: false,
+    logo: '',
+    opacidade: 45,
+    posicao: 'inferior-direita',
+    tamanho: 18,
+    margem: 32,
+  })
 
   useEffect(() => {
     let ativo = true
@@ -344,9 +353,24 @@ export default function EditarImovel() {
     async function carregarImovel() {
       setLoading(true)
       setErro('')
-      const { data, error } = await supabase.from('imoveis').select('*').eq('id', id).single()
+      const [{ data, error }, { data: configData }] = await Promise.all([
+        supabase.from('imoveis').select('*').eq('id', id).single(),
+        supabase.from('configuracoes').select('watermark_ativo, watermark_logo, watermark_opacidade, watermark_posicao, watermark_tamanho, watermark_margem').eq('id', 'site').single(),
+      ])
 
       if (!ativo) return
+
+      if (configData) {
+        const cfg = configData as Record<string, unknown>
+        setWatermark({
+          ativo: cfg.watermark_ativo === true,
+          logo: typeof cfg.watermark_logo === 'string' ? cfg.watermark_logo : '',
+          opacidade: Number(cfg.watermark_opacidade || 45),
+          posicao: typeof cfg.watermark_posicao === 'string' ? cfg.watermark_posicao : 'inferior-direita',
+          tamanho: Number(cfg.watermark_tamanho || 18),
+          margem: Number(cfg.watermark_margem || 32),
+        })
+      }
 
       if (error) {
         setErro('Não foi possível carregar este imóvel.')
@@ -448,35 +472,67 @@ export default function EditarImovel() {
 
   function handleFotos(event: ChangeEvent<HTMLInputElement>) {
     const arquivos = Array.from(event.target.files || [])
-    const imagensValidas = arquivos.filter((arquivo) => arquivo.type.startsWith('image/') && arquivo.size <= 10 * 1024 * 1024)
+    const imagensValidas = arquivos.filter((arquivo) => {
+      const tipoOk = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(arquivo.type)
+      const tamanhoOk = arquivo.size <= 10 * 1024 * 1024
+      return tipoOk && tamanhoOk
+    })
     const ignoradas = arquivos.length - imagensValidas.length
 
     if (ignoradas > 0) {
-      setAviso(`${ignoradas} arquivo(s) ignorado(s): use somente imagens de até 10MB.`)
+      setAviso(`${ignoradas} arquivo(s) ignorado(s): use JPG, PNG, WEBP ou GIF de até 10MB.`)
+    } else if (imagensValidas.length > 0) {
+      setAviso('Fotos selecionadas. Clique em Salvar alterações para enviar ao site.')
     } else {
       setAviso('')
     }
 
-    setNovasFotos(imagensValidas)
+    setNovasFotos((atuais) => [...atuais, ...imagensValidas])
+    event.target.value = ''
+  }
+
+  function limparNomeArquivo(nome: string) {
+    const limpo = nome
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+
+    return limpo || 'foto.jpg'
   }
 
   async function subirFotos() {
     const urlsFotos = [...fotosExistentes]
 
-    for (const foto of novasFotos) {
-      const extensao = foto.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const nomeSeguro = `${id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extensao}`
+    for (const fotoOriginal of novasFotos) {
+      const foto = await aplicarMarcaDagua(fotoOriginal, watermark)
+      const nomeSeguro = `${Date.now()}-${Math.random().toString(36).slice(2)}-${limparNomeArquivo(foto.name)}`
       const { data, error } = await supabase.storage
         .from('fotos-imoveis')
         .upload(nomeSeguro, foto, { cacheControl: '3600', upsert: false, contentType: foto.type })
 
-      if (error) throw error
+      if (error) {
+        throw new Error(`Falha ao subir "${fotoOriginal.name}": ${error.message}. Confirme o bucket fotos-imoveis e as políticas de upload no Supabase.`)
+      }
+
+      if (!data?.path) {
+        throw new Error(`Falha ao subir "${fotoOriginal.name}": o Supabase não retornou o caminho do arquivo.`)
+      }
 
       const { data: urlData } = supabase.storage.from('fotos-imoveis').getPublicUrl(data.path)
+      if (!urlData?.publicUrl) {
+        throw new Error(`Falha ao gerar URL pública da foto "${fotoOriginal.name}".`)
+      }
+
       urlsFotos.push(urlData.publicUrl)
     }
 
     return urlsFotos
+  }
+
+  function removerNovaFoto(index: number) {
+    setNovasFotos((atuais) => atuais.filter((_, itemIndex) => itemIndex !== index))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -508,6 +564,8 @@ export default function EditarImovel() {
 
       const detalhesParaSalvar: DetalhesState = {
         ...detalhes,
+        caracteristicas: Array.from(new Set(detalhes.caracteristicas.filter((item) => item.trim().length > 0))),
+        aceita_financiamento: Array.from(new Set(detalhes.aceita_financiamento.filter((item) => item.trim().length > 0))),
         numero_lote: detalhes.numero_lote.trim(),
         cep: detalhes.cep.trim(),
         titulo_anuncio: detalhes.titulo_anuncio.trim(),
@@ -1004,8 +1062,19 @@ export default function EditarImovel() {
                 Clique aqui para adicionar fotos
                 <input type="file" multiple accept="image/*" onChange={handleFotos} style={{ display: 'none' }} />
               </label>
-              <p style={{ color: '#6b6355', fontSize: '12px', marginTop: '8px' }}>JPG, PNG, WEBP ou GIF até 10MB por arquivo.</p>
-              {novasFotos.length > 0 && <p style={{ color: '#e8e0d0', fontSize: '13px', marginTop: '10px' }}>{novasFotos.length} nova(s) foto(s) selecionada(s)</p>}
+              <p style={{ color: '#6b6355', fontSize: '12px', marginTop: '8px' }}>JPG, PNG, WEBP ou GIF até 10MB por arquivo. Se a marca d’água estiver ativa em Configurações, ela será gravada nas novas fotos ao salvar.</p>
+              {novasFotos.length > 0 && (
+                <div style={{ marginTop: '14px', display: 'grid', gap: '8px' }}>
+                  <p style={{ color: '#e8e0d0', fontSize: '13px' }}>{novasFotos.length} nova(s) foto(s) selecionada(s). Elas sobem quando você salvar.</p>
+                  {watermark.ativo && watermark.logo && <p style={{ color: '#c9a84c', fontSize: '12px' }}>Marca d’água ativa: a logo será aplicada nas fotos novas.</p>}
+                  {novasFotos.map((foto, index) => (
+                    <div key={`${foto.name}-${foto.lastModified}-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', background: '#0f0e0c', border: '1px solid rgba(201,168,76,0.16)', padding: '8px 10px' }}>
+                      <span style={{ color: '#a09880', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{foto.name}</span>
+                      <button type="button" onClick={() => removerNovaFoto(index)} style={{ background: 'transparent', border: 'none', color: '#ff8a7a', cursor: 'pointer', fontSize: '12px' }}>Remover</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
