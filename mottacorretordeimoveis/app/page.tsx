@@ -114,18 +114,78 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
           .footer-home { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
           .filtros-preco { display: grid; grid-template-columns: 1fr 1fr; }
         }
-      `}</style>
+      `}
+        /* Header Motta: Imóveis | Logo | WhatsApp */
+        .home-header-inner {
+          position: relative !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 96px !important;
+          padding: 0 32px !important;
+        }
+
+        .home-nav-links {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 16px !important;
+          position: relative !important;
+          z-index: 3 !important;
+        }
+
+        .home-header-logo {
+          position: absolute !important;
+          left: 50% !important;
+          top: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          height: 82px !important;
+          width: auto !important;
+          max-width: 230px !important;
+          object-fit: contain !important;
+          z-index: 5 !important;
+          display: block !important;
+        }
+
+        .home-header-inner a:has(.home-header-logo) {
+          position: absolute !important;
+          left: 50% !important;
+          top: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          z-index: 5 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        @media (max-width: 768px) {
+          .home-header-inner {
+            min-height: 84px !important;
+            padding: 0 18px !important;
+          }
+
+          .home-header-logo {
+            height: 64px !important;
+            max-width: 170px !important;
+          }
+
+          .home-nav-links {
+            gap: 10px !important;
+          }
+        }
+
+      </style>
 
       {cfg.banner_posicao === 'topo' && <Banner />}
 
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}
         className="home-header">
-        <img src="/LOGO_transparente_final.png" alt="Motta Corretor" className="home-header-logo" style={{ objectFit: 'contain' }} />
+        <img src="https://wabkkqbgfwufmxjutxsr.supabase.co/storage/v1/object/public/assets/LOGO%20MOTTA%20site.png" alt="Motta Corretor" className="home-header-logo" style={{ objectFit: 'contain' }} />
         <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
           <div className="home-nav-links">
             <a href="#imoveis" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Imóveis</a>
-            <a href="#contato" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>Contato</a>
-          </div>
+</div>
           <a href={`https://wa.me/${cfg.whatsapp}`} target="_blank" rel="noreferrer" style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>WhatsApp</a>
         </nav>
       </header>
