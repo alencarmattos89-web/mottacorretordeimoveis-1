@@ -102,75 +102,49 @@ export default async function Home({ searchParams }: { searchParams: Promise<any
         .home-hero { padding: 100px 32px 80px; }
         .home-hero h1 { font-size: 52px; }
         .imoveis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
-        @media (max-width: 768px) {
-          .home-header { padding: 0 16px !important; }
-          .home-header-logo { height: 40px !important; }
-          .home-nav-links { display: none !important; }
-          .home-hero { padding: 60px 16px 48px !important; }
-          .home-hero h1 { font-size: clamp(26px, 7vw, 44px) !important; }
-          .imoveis-section { padding: 40px 16px !important; }
-          .imoveis-grid { grid-template-columns: 1fr !important; }
-          .contato-section { padding: 60px 16px !important; }
-          .footer-home { flex-direction: column !important; gap: 12px !important; text-align: center !important; }
-          .filtros-preco { display: grid; grid-template-columns: 1fr 1fr; }
-        }
-        /* Header Motta: Imóveis | Logo | WhatsApp */
-        .home-header-inner {
-          position: relative !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          min-height: 96px !important;
-          padding: 0 32px !important;
-        }
-
-        .home-nav-links {
-          width: 100% !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: space-between !important;
-          gap: 16px !important;
-          position: relative !important;
-          z-index: 3 !important;
-        }
-
-        .home-header-logo {
-          position: absolute !important;
-          left: 50% !important;
-          top: 50% !important;
-          transform: translate(-50%, -50%) !important;
-          height: 82px !important;
-          width: auto !important;
-          max-width: 230px !important;
-          object-fit: contain !important;
-          z-index: 5 !important;
-          display: block !important;
-        }
-
-        .home-header-inner a:has(.home-header-logo) {
-          position: absolute !important;
-          left: 50% !important;
-          top: 50% !important;
-          transform: translate(-50%, -50%) !important;
-          z-index: 5 !important;
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-        }
 
         @media (max-width: 768px) {
           .home-header-inner {
-            min-height: 84px !important;
-            padding: 0 18px !important;
+            min-height: 78px !important;
+            padding: 0 14px !important;
           }
 
           .home-header-logo {
-            height: 64px !important;
-            max-width: 170px !important;
+            height: 54px !important;
+            width: auto !important;
+            max-width: 145px !important;
+            object-fit: contain !important;
+          }
+
+          .home-header-inner a:has(.home-header-logo) {
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 5 !important;
           }
 
           .home-nav-links {
-            gap: 10px !important;
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr 145px 1fr !important;
+            align-items: center !important;
+            gap: 0 !important;
+            position: relative !important;
+            z-index: 6 !important;
+          }
+
+          .home-nav-links > a:first-child {
+            justify-self: start !important;
+            font-size: 13px !important;
+            white-space: nowrap !important;
+          }
+
+          .home-nav-links > a:last-child {
+            justify-self: end !important;
+            font-size: 13px !important;
+            white-space: nowrap !important;
+            padding: 8px 10px !important;
           }
         }
 
