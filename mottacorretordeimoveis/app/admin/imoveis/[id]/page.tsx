@@ -1,6 +1,6 @@
 'use client'
 
-import { supabaseBrowser as supabase } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, DragEvent, FormEvent, CSSProperties, ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
