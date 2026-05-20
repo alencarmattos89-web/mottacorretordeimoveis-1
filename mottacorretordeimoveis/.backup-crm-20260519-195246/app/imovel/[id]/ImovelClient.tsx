@@ -63,73 +63,24 @@ export default function ImovelClient() {
     setSemelhantes([...(prioridade || []), ...(complemento || [])])
   }
 
-  async function registrarLead(origem: 'formulario' | 'whatsapp_click', dados: Partial<typeof form> = {}) {
-    const paginaUrl = typeof window !== 'undefined' ? `${window.location.origin}/imovel/${imovel.id}` : null
-
-    const res = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nome: dados.nome || form.nome || 'Lead via WhatsApp',
-        telefone: dados.telefone || form.telefone || 'Não informado',
-        email: dados.email || form.email || null,
-        imovel_id: imovel.id,
-        imovel_titulo: imovel.titulo,
-        origem,
-        pagina_url: paginaUrl,
-        corretor_whatsapp: whatsapp,
-        temperatura: origem === 'whatsapp_click' ? 'quente' : 'morno',
-      }),
-    })
-
-    const data = await res.json()
-    if (!res.ok) throw new Error(data?.error || 'Erro ao criar lead')
-    return data
-  }
-
   async function handleSubmit(e: any) {
     e.preventDefault()
     setEnviando(true)
-
-    try {
-      await registrarLead('formulario', form)
-      setEnviado(true)
-      setForm({ nome: '', telefone: '', email: '' })
-    } catch (err) {
-      console.error('Erro ao enviar lead:', err)
-      alert('Não foi possível enviar seu interesse. Tente novamente ou chame pelo WhatsApp.')
-    } finally {
-      setEnviando(false)
-    }
+    await supabase.from('leads').insert({
+      nome: form.nome,
+      telefone: form.telefone,
+      email: form.email || null,
+      imovel_id: imovel.id,
+      imovel_titulo: imovel.titulo,
+      status: 'novo',
+    })
+    setEnviado(true)
+    setEnviando(false)
   }
 
-  function mensagemWhatsApp(leadId?: string | number) {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/imovel/${imovel.id}` : ''
-    const linhas = [
-      `Olá! Tenho interesse no imóvel: *${imovel.titulo}* — ${imovel.bairro}, ${imovel.cidade}.`,
-      leadId ? `Código do atendimento: #${leadId}` : '',
-      url ? `Link: ${url}` : '',
-    ].filter(Boolean)
-
-    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(linhas.join('\n'))}`
-  }
-
-  async function handleWhatsAppClick(e: any) {
-    e.preventDefault()
-
-    const fallbackUrl = mensagemWhatsApp()
-    const janela = window.open('', '_blank', 'noopener,noreferrer')
-
-    try {
-      const data = await registrarLead('whatsapp_click')
-      const url = data?.whatsapp_url || mensagemWhatsApp(data?.id)
-      if (janela) janela.location.href = url
-      else window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (err) {
-      console.error('Erro ao registrar clique no WhatsApp:', err)
-      if (janela) janela.location.href = fallbackUrl
-      else window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
-    }
+  function mensagemWhatsApp() {
+    const texto = `Olá! Tenho interesse no imóvel: *${imovel.titulo}* — ${imovel.bairro}, ${imovel.cidade}.`
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(texto)}`
   }
 
   function compartilharWhatsApp() {
@@ -186,7 +137,7 @@ export default function ImovelClient() {
       `}</style>
 
       {/* Botão WhatsApp flutuante para mobile */}
-      <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
+      <a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"
         className="whatsapp-fixo"
         style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 100, background: '#25D366', color: '#fff', borderRadius: '50px', padding: '14px 20px', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, textDecoration: 'none', alignItems: 'center', gap: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
         <IconeWhatsApp />
@@ -198,7 +149,7 @@ export default function ImovelClient() {
         <Link href="/"><img src="/LOGO_transparente_final.png" alt="Motta Corretor" className="header-logo" style={{ objectFit: 'contain' }} /></Link>
         <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
           <Link href="/" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>← Imóveis</Link>
-          <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
+          <a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"
             className="whatsapp-btn-header"
             style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>
             WhatsApp
@@ -312,7 +263,7 @@ export default function ImovelClient() {
 
           {/* Sidebar */}
           <div className="sidebar">
-            <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
+            <a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#25D366', color: '#fff', padding: '18px', fontSize: '13px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, textDecoration: 'none', marginBottom: '1px' }}>
               <IconeWhatsApp />
               Falar no WhatsApp

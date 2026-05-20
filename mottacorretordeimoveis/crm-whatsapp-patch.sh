@@ -1,3 +1,300 @@
+npx supabase login#!/usr/bin/env bash
+set -euo pipefail
+
+# CRM + WhatsApp patch para o projeto Motta Corretor de Imóveis.
+# Rode na raiz do projeto, onde existem as pastas app/, lib/ e supabase/.
+
+if [ ! -d "app" ] || [ ! -d "supabase" ]; then
+  echo "Erro: rode este script na raiz do projeto, onde existem as pastas app/ e supabase/." >&2
+  exit 1
+fi
+
+STAMP="$(date +%Y%m%d%H%M%S)"
+BACKUP_DIR="$(cd .. && pwd)/crm-whatsapp-backup-$STAMP"
+mkdir -p "$BACKUP_DIR"
+
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    mkdir -p "$BACKUP_DIR/$(dirname "$file")"
+    cp "$file" "$BACKUP_DIR/$file"
+  fi
+}
+
+backup_file "app/api/lead/route.ts"
+backup_file "app/api/leads/route.ts"
+backup_file "app/imovel/[id]/ImovelClient.tsx"
+backup_file "app/admin/leads/page.tsx"
+
+mkdir -p app/api/leads supabase/migrations
+
+cat > supabase/migrations/20260520090000_crm_leads_unificado_whatsapp.sql <<'SQL'
+-- CRM unificado para leads + rastreio de origem WhatsApp/formulário.
+-- Depois de aplicar esta migration, use a tabela public.leads como fonte única do CRM.
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.leads (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  telefone text not null,
+  email text,
+  imovel_id uuid,
+  imovel_titulo text,
+  status text not null default 'novo',
+  anotacoes text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.leads add column if not exists origem text not null default 'formulario';
+alter table public.leads add column if not exists telefone_normalizado text;
+alter table public.leads add column if not exists temperatura text not null default 'morno';
+alter table public.leads add column if not exists preferencias text;
+alter table public.leads add column if not exists orcamento_min numeric;
+alter table public.leads add column if not exists orcamento_max numeric;
+alter table public.leads add column if not exists proxima_acao_em timestamptz;
+alter table public.leads add column if not exists ultima_interacao_em timestamptz;
+alter table public.leads add column if not exists pagina_url text;
+alter table public.leads add column if not exists codigo_atendimento text;
+alter table public.leads add column if not exists consentiu_whatsapp boolean not null default true;
+alter table public.leads add column if not exists updated_at timestamptz not null default now();
+
+create index if not exists leads_status_idx on public.leads(status);
+create index if not exists leads_origem_idx on public.leads(origem);
+create index if not exists leads_proxima_acao_idx on public.leads(proxima_acao_em);
+create index if not exists leads_created_at_idx on public.leads(created_at desc);
+create index if not exists leads_telefone_normalizado_idx on public.leads(telefone_normalizado);
+
+create or replace function public.set_leads_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists leads_set_updated_at on public.leads;
+create trigger leads_set_updated_at
+before update on public.leads
+for each row execute function public.set_leads_updated_at();
+
+-- Migra dados antigos de public.atendimentos, se a tabela existir.
+do $$
+begin
+  if to_regclass('public.atendimentos') is not null then
+    insert into public.leads (
+      nome,
+      telefone,
+      email,
+      imovel_titulo,
+      status,
+      origem,
+      pagina_url,
+      created_at,
+      ultima_interacao_em,
+      codigo_atendimento,
+      consentiu_whatsapp
+    )
+    select
+      a.nome,
+      a.telefone,
+      a.email,
+      a.referencia_imovel,
+      case
+        when lower(coalesce(a.status, '')) in ('abertos', 'aberto') then 'novo'
+        when lower(coalesce(a.status, '')) in ('fechado', 'fechados') then 'fechado'
+        when lower(coalesce(a.status, '')) in ('perdido', 'perdidos') then 'perdido'
+        else 'novo'
+      end,
+      'migrado_atendimentos',
+      a.pagina_url,
+      coalesce(a.criado_em, now()),
+      coalesce(a.criado_em, now()),
+      'A-' || a.id::text,
+      true
+    from public.atendimentos a
+    where not exists (
+      select 1
+      from public.leads l
+      where l.telefone = a.telefone
+        and coalesce(l.imovel_titulo, '') = coalesce(a.referencia_imovel, '')
+        and l.created_at between coalesce(a.criado_em, now()) - interval '5 minutes'
+                         and coalesce(a.criado_em, now()) + interval '5 minutes'
+    );
+  end if;
+end $$;
+
+-- Segurança mínima: visitante pode criar lead; admin autenticado pode ler/editar.
+alter table public.leads enable row level security;
+
+drop policy if exists "leads_insert_public" on public.leads;
+drop policy if exists "leads_select_admin" on public.leads;
+drop policy if exists "leads_update_admin" on public.leads;
+drop policy if exists "leads_delete_admin" on public.leads;
+
+create policy "leads_insert_public"
+on public.leads for insert
+to anon, authenticated
+with check (true);
+
+create policy "leads_select_admin"
+on public.leads for select
+to authenticated
+using (true);
+
+create policy "leads_update_admin"
+on public.leads for update
+to authenticated
+using (true)
+with check (true);
+
+create policy "leads_delete_admin"
+on public.leads for delete
+to authenticated
+using (true);
+SQL
+
+cat > app/api/leads/route.ts <<'TS'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+function getSupabase() {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY não configuradas')
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+function somenteDigitos(valor?: string | null) {
+  return String(valor || '').replace(/\D/g, '')
+}
+
+function normalizarTelefone(valor?: string | null) {
+  const digitos = somenteDigitos(valor)
+  if (!digitos) return null
+  if (digitos.startsWith('55')) return digitos
+  if (digitos.length >= 10) return `55${digitos}`
+  return digitos
+}
+
+function limparTexto(valor: unknown, fallback = '') {
+  const texto = String(valor ?? '').trim()
+  return texto || fallback
+}
+
+function proximaAcaoPadrao() {
+  const data = new Date()
+  data.setHours(data.getHours() + 2)
+  return data.toISOString()
+}
+
+function montarMensagemWhatsApp(input: {
+  id: string | number
+  nome: string
+  imovel_titulo?: string | null
+  pagina_url?: string | null
+}) {
+  const linhas = [
+    `Olá! Tenho interesse no imóvel: ${input.imovel_titulo || 'imóvel do site'}.`,
+    `Código do atendimento: #${input.id}`,
+  ]
+
+  if (input.pagina_url) linhas.push(`Link: ${input.pagina_url}`)
+
+  return linhas.join('\n')
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const supabase = getSupabase()
+
+    const origem = limparTexto(body.origem, 'formulario')
+    const nome = limparTexto(body.nome, origem === 'whatsapp_click' ? 'Lead via WhatsApp' : '')
+    const telefone = limparTexto(body.telefone, origem === 'whatsapp_click' ? 'Não informado' : '')
+
+    if (!nome) {
+      return NextResponse.json({ error: 'Informe o nome do lead.' }, { status: 400 })
+    }
+
+    if (!telefone) {
+      return NextResponse.json({ error: 'Informe o telefone do lead.' }, { status: 400 })
+    }
+
+    const telefoneNormalizado = normalizarTelefone(telefone)
+    const paginaUrl = limparTexto(body.pagina_url, '') || req.headers.get('referer') || null
+    const imovelTitulo = limparTexto(body.imovel_titulo || body.referencia || body.referencia_imovel, '') || null
+    const imovelId = body.imovel_id || null
+
+    const payload = {
+      nome,
+      telefone,
+      telefone_normalizado: telefoneNormalizado,
+      email: limparTexto(body.email, '') || null,
+      imovel_id: imovelId,
+      imovel_titulo: imovelTitulo,
+      origem,
+      pagina_url: paginaUrl,
+      status: limparTexto(body.status, 'novo'),
+      temperatura: limparTexto(body.temperatura, origem === 'whatsapp_click' ? 'quente' : 'morno'),
+      preferencias: limparTexto(body.preferencias, '') || null,
+      proxima_acao_em: body.proxima_acao_em || proximaAcaoPadrao(),
+      ultima_interacao_em: new Date().toISOString(),
+      consentiu_whatsapp: body.consentiu_whatsapp !== false,
+      anotacoes: limparTexto(body.anotacoes, '') || null,
+    }
+
+    const { data, error } = await supabase
+      .from('leads')
+      .insert(payload)
+      .select('*')
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    const corretorWhatsApp = normalizarTelefone(body.corretor_whatsapp || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER)
+    const mensagem = montarMensagemWhatsApp({
+      id: data.id,
+      nome: data.nome,
+      imovel_titulo: data.imovel_titulo,
+      pagina_url: data.pagina_url,
+    })
+
+    const whatsapp_url = corretorWhatsApp
+      ? `https://wa.me/${corretorWhatsApp}?text=${encodeURIComponent(mensagem)}`
+      : null
+
+    // Integração opcional: coloque uma URL de webhook do n8n/Zapier/Make em CRM_NOTIFICATION_WEBHOOK_URL.
+    // Assim você pode receber aviso no WhatsApp, Telegram ou e-mail sem travar o formulário.
+    if (process.env.CRM_NOTIFICATION_WEBHOOK_URL) {
+      fetch(process.env.CRM_NOTIFICATION_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead: data, whatsapp_url }),
+      }).catch((err) => console.error('Erro ao notificar webhook do CRM:', err))
+    }
+
+    return NextResponse.json({ success: true, id: data.id, lead: data, whatsapp_url })
+  } catch (err) {
+    console.error('Erro no endpoint /api/leads:', err)
+    return NextResponse.json({ error: 'Erro ao processar lead.' }, { status: 500 })
+  }
+}
+TS
+
+cat > app/api/lead/route.ts <<'TS'
+export { POST } from '../leads/route'
+TS
+
+cat > app/admin/leads/page.tsx <<'TSX'
 'use client'
 
 import { supabase } from '@/lib/supabase'
@@ -382,3 +679,103 @@ function cardFiltro(ativo: boolean, cor: string): React.CSSProperties {
     fontSize: '9px',
   }
 }
+TSX
+
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+path = Path('app/imovel/[id]/ImovelClient.tsx')
+text = path.read_text()
+
+old = re.search(r"  async function handleSubmit\(e: any\) \{.*?\n  function compartilharWhatsApp\(\) \{", text, re.S)
+if not old:
+    raise SystemExit('Não encontrei o bloco handleSubmit/mensagemWhatsApp para alterar em ImovelClient.tsx')
+
+new = r'''  async function registrarLead(origem: 'formulario' | 'whatsapp_click', dados: Partial<typeof form> = {}) {
+    const paginaUrl = typeof window !== 'undefined' ? `${window.location.origin}/imovel/${imovel.id}` : null
+
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: dados.nome || form.nome || 'Lead via WhatsApp',
+        telefone: dados.telefone || form.telefone || 'Não informado',
+        email: dados.email || form.email || null,
+        imovel_id: imovel.id,
+        imovel_titulo: imovel.titulo,
+        origem,
+        pagina_url: paginaUrl,
+        corretor_whatsapp: whatsapp,
+        temperatura: origem === 'whatsapp_click' ? 'quente' : 'morno',
+      }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error || 'Erro ao criar lead')
+    return data
+  }
+
+  async function handleSubmit(e: any) {
+    e.preventDefault()
+    setEnviando(true)
+
+    try {
+      await registrarLead('formulario', form)
+      setEnviado(true)
+      setForm({ nome: '', telefone: '', email: '' })
+    } catch (err) {
+      console.error('Erro ao enviar lead:', err)
+      alert('Não foi possível enviar seu interesse. Tente novamente ou chame pelo WhatsApp.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  function mensagemWhatsApp(leadId?: string | number) {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/imovel/${imovel.id}` : ''
+    const linhas = [
+      `Olá! Tenho interesse no imóvel: *${imovel.titulo}* — ${imovel.bairro}, ${imovel.cidade}.`,
+      leadId ? `Código do atendimento: #${leadId}` : '',
+      url ? `Link: ${url}` : '',
+    ].filter(Boolean)
+
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(linhas.join('\n'))}`
+  }
+
+  async function handleWhatsAppClick(e: any) {
+    e.preventDefault()
+
+    const fallbackUrl = mensagemWhatsApp()
+    const janela = window.open('', '_blank', 'noopener,noreferrer')
+
+    try {
+      const data = await registrarLead('whatsapp_click')
+      const url = data?.whatsapp_url || mensagemWhatsApp(data?.id)
+      if (janela) janela.location.href = url
+      else window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      console.error('Erro ao registrar clique no WhatsApp:', err)
+      if (janela) janela.location.href = fallbackUrl
+      else window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  function compartilharWhatsApp() {'''
+
+text = text[:old.start()] + new + text[old.end():]
+
+text = text.replace('<a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"\n        className="whatsapp-fixo"', '<a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"\n        className="whatsapp-fixo"')
+text = text.replace('<a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"\n            className="whatsapp-btn-header"', '<a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"\n            className="whatsapp-btn-header"')
+text = text.replace('<a href={mensagemWhatsApp()} target="_blank" rel="noreferrer"\n              style={{ display: \'flex\'', '<a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"\n              style={{ display: \'flex\'')
+
+path.write_text(text)
+PY
+
+echo "✅ Patch aplicado. Backup salvo em: $BACKUP_DIR"
+echo ""
+echo "Próximos passos:"
+echo "1) Revise os arquivos alterados com: git diff"
+echo "2) Aplique a migration no Supabase: supabase db push ou cole o SQL no painel do Supabase"
+echo "3) Rode: npm run lint && npm run build"
+echo "4) Teste um formulário e um clique no WhatsApp em uma página de imóvel"
