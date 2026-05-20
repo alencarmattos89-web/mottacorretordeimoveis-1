@@ -1,9 +1,14 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
+
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 const STATUS_LABELS: Record<string, { label: string; cor: string }> = {
   novo: { label: 'Novo', cor: '#c9a84c' },
