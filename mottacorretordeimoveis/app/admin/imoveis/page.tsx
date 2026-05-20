@@ -15,11 +15,12 @@ export default function ImoveisAdmin() {
   useEffect(() => { carregarImoveis() }, [])
 
   async function carregarImoveis() {
+    setLoading(true)
     const { data } = await supabase
       .from('imoveis')
       .select('*')
       .order('created_at', { ascending: false })
-    setImoveis(data || [])
+    setImoveis(data ?? [])
     setLoading(false)
   }
 
@@ -55,10 +56,12 @@ export default function ImoveisAdmin() {
         .delete()
         .eq('id', imovelAlvo.id)
       if (error) throw error
+      // Remove da lista local imediatamente — sem precisar buscar de novo
+      const idExcluido = imovelAlvo.id
+      setImoveis((atual) => atual.filter((i) => i.id !== idExcluido))
       setModalAberto(false)
       setImovelAlvo(null)
       setTextoConfirmacao('')
-      await carregarImoveis()
     } catch (err: any) {
       alert('Erro ao excluir: ' + (err?.message || 'tente novamente'))
     } finally {
