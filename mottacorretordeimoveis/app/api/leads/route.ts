@@ -56,6 +56,75 @@ function montarMensagemWhatsApp(input: {
   return linhas.join('\n')
 }
 
+
+async function enviarNotificacaoWhatsApp(input: {
+  lead: any
+  whatsapp_url?: string | null
+}) {
+  const token = process.env.WHATSAPP_CLOUD_ACCESS_TOKEN
+  const phoneNumberId = process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID
+  const apiVersion = process.env.WHATSAPP_CLOUD_API_VERSION || 'v22.0'
+  const notifyTo = normalizarTelefone(
+    process.env.WHATSAPP_NOTIFY_TO || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER
+  )
+
+  const templateName = process.env.WHATSAPP_NOTIFY_TEMPLATE_NAME || 'novo_lead_site'
+  const templateLang = process.env.WHATSAPP_NOTIFY_TEMPLATE_LANG || 'pt_BR'
+
+  if (!token || !phoneNumberId || !notifyTo) {
+    console.warn('Notificação WhatsApp não enviada: variáveis da Cloud API ausentes.')
+    return
+  }
+
+  const lead = input.lead || {}
+  const codigo = lead.codigo_atendimento || `#${lead.id}`
+  const link = lead.pagina_url || input.whatsapp_url || 'Site'
+
+  const limitar = (valor: unknown) =>
+    String(valor || 'Não informado').slice(0, 900)
+
+  const payload = {
+    messaging_product: 'whatsapp',
+    to: notifyTo,
+    type: 'template',
+    template: {
+      name: templateName,
+      language: {
+        code: templateLang,
+      },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: limitar(lead.nome) },
+            { type: 'text', text: limitar(lead.telefone_normalizado || lead.telefone) },
+            { type: 'text', text: limitar(lead.imovel_titulo || 'Imóvel do site') },
+            { type: 'text', text: limitar(codigo) },
+            { type: 'text', text: limitar(link) },
+          ],
+        },
+      ],
+    },
+  }
+
+  const res = await fetch(
+    `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }
+  )
+
+  if (!res.ok) {
+    const detalhes = await res.text()
+    console.error('Erro ao enviar notificação WhatsApp:', detalhes)
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -117,6 +186,10 @@ export async function POST(req: NextRequest) {
     const whatsapp_url = corretorWhatsApp
       ? `https://wa.me/${corretorWhatsApp}?text=${encodeURIComponent(mensagem)}`
       : null
+
+    enviarNotificacaoWhatsApp({ lead: data, whatsapp_url }).catch((err) =>
+      console.error('Erro ao disparar notificação WhatsApp:', err)
+    )
 
     // Integração opcional: coloque uma URL de webhook do n8n/Zapier/Make em CRM_NOTIFICATION_WEBHOOK_URL.
     // Assim você pode receber aviso no WhatsApp, Telegram ou e-mail sem travar o formulário.
