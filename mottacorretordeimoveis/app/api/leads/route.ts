@@ -3,13 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 function getSupabase() {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY não configuradas')
+  if (!supabaseUrl || (!supabaseServiceRoleKey && !supabaseAnonKey)) {
+    throw new Error('Variáveis Supabase não configuradas')
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  const supabaseKey = supabaseServiceRoleKey || supabaseAnonKey!
+
+  return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }
