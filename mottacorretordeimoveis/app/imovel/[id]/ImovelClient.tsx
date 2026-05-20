@@ -195,7 +195,7 @@ export default function ImovelClient() {
 
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}
         className="header-nav">
-        <Link href="/"><img src="/LOGO_transparente_final.png" alt="Motta Corretor" className="header-logo" style={{ objectFit: 'contain' }} /></Link>
+        <Link href="/"><img src="https://wabkkqbgfwufmxjutxsr.supabase.co/storage/v1/object/public/assets/LOGO%20MOTTA%20site.png" alt="Motta Corretor" className="header-logo" style={{ objectFit: 'contain' }} /></Link>
         <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
           <Link href="/" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>← Imóveis</Link>
           <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
@@ -391,7 +391,7 @@ export default function ImovelClient() {
 
       <footer style={{ background: '#070706', padding: '32px', borderTop: '1px solid rgba(201,168,76,0.15)' }}>
         <div className="footer-inner">
-          <img src="/LOGO_transparente_final.png" alt="Motta Corretor" style={{ height: '36px', objectFit: 'contain' }} />
+          <img src="https://wabkkqbgfwufmxjutxsr.supabase.co/storage/v1/object/public/assets/LOGO%20MOTTA%20site.png" alt="Motta Corretor" style={{ height: '36px', objectFit: 'contain' }} />
           <p style={{ fontSize: '11px', color: '#4a4438', letterSpacing: '1px' }}>{cidade} · CRECI {creci}</p>
         </div>
       </footer>

@@ -7,17 +7,18 @@ import LogoutButton from '@/components/LogoutButton'
 export default function ImoveisAdmin() {
   const [imoveis, setImoveis] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Modal de exclusão
   const [modalAberto, setModalAberto] = useState(false)
-  const [imovelParaExcluir, setImovelParaExcluir] = useState<{ id: string; titulo: string } | null>(null)
-  const [confirmacaoTexto, setConfirmacaoTexto] = useState('')
+  const [imovelAlvo, setImovelAlvo] = useState<{ id: string; titulo: string } | null>(null)
+  const [textoConfirmacao, setTextoConfirmacao] = useState('')
   const [excluindo, setExcluindo] = useState(false)
 
   useEffect(() => { carregarImoveis() }, [])
 
   async function carregarImoveis() {
-    const { data } = await supabase.from('imoveis').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('imoveis')
+      .select('*')
+      .order('created_at', { ascending: false })
     setImoveis(data || [])
     setLoading(false)
   }
@@ -32,75 +33,87 @@ export default function ImoveisAdmin() {
     carregarImoveis()
   }
 
-  function abrirModalExcluir(id: string, titulo: string) {
-    setImovelParaExcluir({ id, titulo })
-    setConfirmacaoTexto('')
+  function abrirModal(id: string, titulo: string) {
+    setImovelAlvo({ id, titulo })
+    setTextoConfirmacao('')
     setModalAberto(true)
   }
 
   function fecharModal() {
     if (excluindo) return
     setModalAberto(false)
-    setImovelParaExcluir(null)
-    setConfirmacaoTexto('')
+    setImovelAlvo(null)
+    setTextoConfirmacao('')
   }
 
-  async function confirmarExclusao() {
-    if (confirmacaoTexto !== 'EXCLUIR' || !imovelParaExcluir) return
+  async function executarExclusao() {
+    if (textoConfirmacao !== 'EXCLUIR' || !imovelAlvo) return
     setExcluindo(true)
-    await supabase.from('imoveis').delete().eq('id', imovelParaExcluir.id)
-    setExcluindo(false)
-    fecharModal()
-    carregarImoveis()
+    try {
+      const { error } = await supabase
+        .from('imoveis')
+        .delete()
+        .eq('id', imovelAlvo.id)
+      if (error) throw error
+      setModalAberto(false)
+      setImovelAlvo(null)
+      setTextoConfirmacao('')
+      await carregarImoveis()
+    } catch (err: any) {
+      alert('Erro ao excluir: ' + (err?.message || 'tente novamente'))
+    } finally {
+      setExcluindo(false)
+    }
   }
 
-  const confirmacaoValida = confirmacaoTexto === 'EXCLUIR'
+  const confirmacaoOk = textoConfirmacao === 'EXCLUIR'
 
   return (
     <main style={{ background: '#0a0a0a', minHeight: '100vh', fontFamily: 'system-ui,sans-serif' }}>
 
-      {/* ── MODAL DE EXCLUSÃO ── */}
+      {/* MODAL */}
       {modalAberto && (
         <div
           onClick={(e) => { if (e.target === e.currentTarget) fecharModal() }}
           style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(0,0,0,0.82)',
+            background: 'rgba(0,0,0,0.85)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '24px',
           }}
         >
           <div style={{
             background: '#0f0e0c',
-            border: '1px solid rgba(192,57,43,0.5)',
+            border: '1px solid rgba(192,57,43,0.55)',
             padding: '36px 32px',
             maxWidth: '460px',
             width: '100%',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
           }}>
-            <p style={{ fontSize: '10px', letterSpacing: '4px', color: '#c0392b', textTransform: 'uppercase', marginBottom: '14px' }}>
-              Ação irreversível
+            <p style={{ fontSize: '10px', letterSpacing: '4px', color: '#c0392b', textTransform: 'uppercase', marginBottom: '12px' }}>
+              ação irreversível
             </p>
-            <h2 style={{ fontFamily: 'Georgia,serif', fontSize: '22px', fontWeight: 300, color: '#e8e0d0', marginBottom: '12px' }}>
+            <h2 style={{ fontFamily: 'Georgia,serif', fontSize: '22px', fontWeight: 300, color: '#e8e0d0', marginBottom: '10px' }}>
               Excluir imóvel?
             </h2>
-            <p style={{ color: '#a09880', fontSize: '13px', lineHeight: 1.6, marginBottom: '22px' }}>
-              Você está prestes a excluir permanentemente:<br />
-              <span style={{ color: '#e8e0d0', fontWeight: 500 }}>{imovelParaExcluir?.titulo}</span>
+            <p style={{ color: '#a09880', fontSize: '13px', lineHeight: 1.65, marginBottom: '24px' }}>
+              Você está prestes a excluir permanentemente:{' '}
+              <strong style={{ color: '#e8e0d0' }}>{imovelAlvo?.titulo}</strong>
             </p>
-            <p style={{ color: '#6b6355', fontSize: '12px', marginBottom: '10px', letterSpacing: '0.5px' }}>
-              Para confirmar, digite <strong style={{ color: '#c0392b', letterSpacing: '2px' }}>EXCLUIR</strong> abaixo:
+            <p style={{ color: '#6b6355', fontSize: '12px', marginBottom: '10px' }}>
+              Digite <strong style={{ color: '#c0392b', letterSpacing: '2px' }}>EXCLUIR</strong> para confirmar:
             </p>
             <input
               autoFocus
-              value={confirmacaoTexto}
-              onChange={(e) => setConfirmacaoTexto(e.target.value.toUpperCase())}
-              onKeyDown={(e) => { if (e.key === 'Enter' && confirmacaoValida) confirmarExclusao() }}
+              value={textoConfirmacao}
+              onChange={(e) => setTextoConfirmacao(e.target.value.toUpperCase())}
+              onKeyDown={(e) => { if (e.key === 'Enter') executarExclusao() }}
               placeholder="EXCLUIR"
               style={{
                 width: '100%',
                 background: '#1a1814',
-                border: `1px solid ${confirmacaoValida ? 'rgba(192,57,43,0.8)' : 'rgba(201,168,76,0.2)'}`,
-                color: confirmacaoValida ? '#ff8a7a' : '#e8e0d0',
+                border: `1px solid ${confirmacaoOk ? '#c0392b' : 'rgba(201,168,76,0.2)'}`,
+                color: confirmacaoOk ? '#ff8a7a' : '#e8e0d0',
                 padding: '12px 14px',
                 fontSize: '16px',
                 letterSpacing: '4px',
@@ -108,6 +121,7 @@ export default function ImoveisAdmin() {
                 boxSizing: 'border-box',
                 fontFamily: 'monospace',
                 marginBottom: '22px',
+                borderRadius: '2px',
               }}
             />
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -128,17 +142,17 @@ export default function ImoveisAdmin() {
                 Cancelar
               </button>
               <button
-                onClick={confirmarExclusao}
-                disabled={!confirmacaoValida || excluindo}
+                onClick={executarExclusao}
+                disabled={!confirmacaoOk || excluindo}
                 style={{
-                  background: confirmacaoValida ? '#c0392b' : '#2a1a1a',
-                  border: `1px solid ${confirmacaoValida ? '#c0392b' : 'rgba(192,57,43,0.2)'}`,
-                  color: confirmacaoValida ? '#fff' : '#5a3333',
+                  background: confirmacaoOk ? '#c0392b' : '#1e1414',
+                  border: `1px solid ${confirmacaoOk ? '#c0392b' : 'rgba(192,57,43,0.15)'}`,
+                  color: confirmacaoOk ? '#fff' : '#4a2a2a',
                   padding: '11px 22px',
                   fontSize: '11px',
                   letterSpacing: '2px',
                   textTransform: 'uppercase',
-                  cursor: confirmacaoValida && !excluindo ? 'pointer' : 'not-allowed',
+                  cursor: confirmacaoOk && !excluindo ? 'pointer' : 'not-allowed',
                   fontWeight: 700,
                   transition: 'all 0.15s',
                 }}
@@ -150,7 +164,7 @@ export default function ImoveisAdmin() {
         </div>
       )}
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <header style={{ background: '#0f0e0c', borderBottom: '1px solid rgba(201,168,76,0.2)', padding: '0 32px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
           <p style={{ fontFamily: 'Georgia,serif', fontSize: '18px', color: '#c9a84c' }}>Motta Admin</p>
@@ -167,7 +181,7 @@ export default function ImoveisAdmin() {
         </div>
       </header>
 
-      {/* ── CONTEÚDO ── */}
+      {/* CONTEÚDO */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 32px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
@@ -197,7 +211,7 @@ export default function ImoveisAdmin() {
                 <div key={imovel.id} style={{ background: '#0f0e0c', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
                     <div style={{ width: '60px', height: '60px', background: '#1a1814', flexShrink: 0, overflow: 'hidden' }}>
-                      {imovel.fotos?.[0] && <img src={imovel.fotos[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      {imovel.fotos?.[0] && <img src={imovel.fotos[0]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />}
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -225,8 +239,8 @@ export default function ImoveisAdmin() {
                       Editar
                     </Link>
                     <button
-                      onClick={() => abrirModalExcluir(imovel.id, imovel.titulo)}
-                      style={{ background: 'transparent', border: '1px solid rgba(192,57,43,0.3)', color: '#c0392b', padding: '4px 10px', fontSize: '10px', letterSpacing: '1px', cursor: 'pointer' }}
+                      onClick={() => abrirModal(imovel.id, imovel.titulo)}
+                      style={{ background: 'transparent', border: '1px solid rgba(192,57,43,0.35)', color: '#c0392b', padding: '4px 10px', fontSize: '10px', letterSpacing: '1px', cursor: 'pointer' }}
                     >
                       Excluir
                     </button>
