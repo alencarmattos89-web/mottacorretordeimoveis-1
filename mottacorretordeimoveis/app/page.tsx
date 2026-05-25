@@ -3,6 +3,10 @@ import Link from 'next/link'
 import CardImovel from '@/components/CardImovel'
 import BannerCarousel from '@/components/BannerCarousel'
 
+// Sem cache — sempre busca dados frescos do Supabase
+export const revalidate = 0
+
+
 type SearchParams = Record<string, string | string[] | undefined>
 
 const configPadrao = {

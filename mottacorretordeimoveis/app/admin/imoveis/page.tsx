@@ -51,12 +51,15 @@ export default function ImoveisAdmin() {
     if (textoConfirmacao !== 'EXCLUIR' || !imovelAlvo) return
     setExcluindo(true)
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('imoveis')
         .delete()
         .eq('id', imovelAlvo.id)
+        .select()
       if (error) throw error
-      // Remove da lista local imediatamente — sem precisar buscar de novo
+      if (!data || data.length === 0) {
+        throw new Error('Exclusão bloqueada. Execute o SQL de permissões no Supabase e tente novamente.')
+      }
       const idExcluido = imovelAlvo.id
       setImoveis((atual) => atual.filter((i) => i.id !== idExcluido))
       setModalAberto(false)
