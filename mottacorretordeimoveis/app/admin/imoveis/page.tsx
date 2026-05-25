@@ -1,5 +1,9 @@
 'use client'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
