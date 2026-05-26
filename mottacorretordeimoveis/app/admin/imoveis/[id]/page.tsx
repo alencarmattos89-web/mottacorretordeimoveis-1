@@ -576,7 +576,7 @@ export default function EditarImovel() {
 
       const { error } = await supabase
         .from('imoveis')
-        .update({ ...payloadBase, dados_administrativos: detalhesParaSalvar })
+        .update({ ...payloadBase, ...payloadExtra, dados_administrativos: detalhesParaSalvar })
         .eq('id', id)
 
       if (error) {
