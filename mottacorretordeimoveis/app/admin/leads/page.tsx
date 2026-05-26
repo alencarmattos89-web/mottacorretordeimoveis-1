@@ -41,6 +41,7 @@ type Lead = {
   proxima_acao_em?: string | null
   ultima_interacao_em?: string | null
   created_at: string
+  arquivado?: boolean
 }
 
 function formatarData(dt?: string | null) {
@@ -98,15 +99,17 @@ export default function LeadsAdmin() {
   const [expandido, setExpandido] = useState<string | null>(null)
   const [rascunho, setRascunho] = useState<Partial<Lead>>({})
   const [filtroStatus, setFiltroStatus] = useState('todos')
+  const [mostrarArquivados, setMostrarArquivados] = useState(false)
   const [filtroBusca, setFiltroBusca] = useState('')
 
-  useEffect(() => { carregarLeads() }, [])
+  useEffect(() => { carregarLeads(mostrarArquivados) }, [mostrarArquivados])
 
-  async function carregarLeads() {
+  async function carregarLeads(arquivados = false) {
     setLoading(true)
     const { data, error } = await supabase
       .from('leads')
       .select('*')
+      .eq('arquivado', arquivados)
       .order('created_at', { ascending: false })
 
     if (error) console.error('Erro ao carregar leads:', error)
@@ -126,6 +129,20 @@ export default function LeadsAdmin() {
     }
 
     await carregarLeads()
+  }
+
+  async function arquivarLead(id: string, arquivar: boolean) {
+    const acao = arquivar ? 'arquivar' : 'desarquivar'
+    if (!confirm(`Deseja ${acao} este lead?`)) return
+    const { error } = await supabase
+      .from('leads')
+      .update({ arquivado: arquivar })
+      .eq('id', id)
+    if (error) {
+      alert(`Erro ao ${acao}: ${error.message}`)
+      return
+    }
+    await carregarLeads(mostrarArquivados)
   }
 
   async function salvarLead(id: string) {
@@ -222,6 +239,12 @@ export default function LeadsAdmin() {
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
           <button onClick={() => setFiltroStatus('todos')} style={{ background: filtroStatus === 'todos' ? '#c9a84c' : '#0f0e0c', color: filtroStatus === 'todos' ? '#0a0a0a' : '#a09880', border: '1px solid rgba(201,168,76,0.25)', padding: '10px 14px', fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
             Todos
+          </button>
+          <button
+            onClick={() => { setMostrarArquivados(!mostrarArquivados); setFiltroStatus('todos') }}
+            style={{ background: mostrarArquivados ? 'rgba(192,57,43,0.15)' : '#0f0e0c', color: mostrarArquivados ? '#c0392b' : '#6b6355', border: `1px solid ${mostrarArquivados ? 'rgba(192,57,43,0.4)' : 'rgba(201,168,76,0.25)'}`, padding: '10px 14px', fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}
+          >
+            {mostrarArquivados ? '← Voltar aos ativos' : '📦 Arquivados'}
           </button>
           <input
             value={filtroBusca}
@@ -324,6 +347,12 @@ export default function LeadsAdmin() {
                           Lembrar amanhã
                         </button>
                         {lead.pagina_url && <a href={lead.pagina_url} target="_blank" rel="noreferrer" style={{ ...secondaryButton, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Ver página</a>}
+                        <button
+                          onClick={() => arquivarLead(lead.id, !lead.arquivado)}
+                          style={{ ...secondaryButton, color: lead.arquivado ? '#61ce70' : '#c0392b', borderColor: lead.arquivado ? 'rgba(97,206,112,0.3)' : 'rgba(192,57,43,0.3)' }}
+                        >
+                          {lead.arquivado ? '↩ Desarquivar' : '📦 Arquivar'}
+                        </button>
                       </div>
                     </div>
                   )}
