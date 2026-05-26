@@ -544,6 +544,7 @@ export default function EditarImovel() {
 
     try {
       const fotos = await subirFotos()
+      // payloadBase: campos originais — usados também no fallback de erro
       const payloadBase = {
         titulo: form.titulo.trim(),
         tipo: form.tipo,
@@ -561,6 +562,9 @@ export default function EditarImovel() {
         ativo: form.ativo,
         mostrar_preco: form.mostrar_preco,
         fotos,
+      }
+      // payloadExtra: colunas adicionadas por migration — omitidas no fallback
+      const payloadExtra = {
         foto_posicao: fotoPosicao,
       }
 
