@@ -161,7 +161,7 @@ export default function ImovelClient() {
       <style>{`
         .detalhe-grid { display: grid; grid-template-columns: 1fr 360px; gap: 48px; align-items: start; }
         .sidebar { position: sticky; top: 96px; }
-        .foto-principal { height: 520px; }
+        .foto-principal { height: auto; }
         .header-logo { height: 52px; }
         .header-nav { padding: 0 32px; }
         .detalhe-content { padding: 56px 32px; max-width: 1100px; margin: 0 auto; }
@@ -174,7 +174,7 @@ export default function ImovelClient() {
         @media (max-width: 768px) {
           .detalhe-grid { grid-template-columns: 1fr !important; }
           .sidebar { position: static !important; top: auto !important; }
-          .foto-principal { height: 280px !important; }
+          .foto-principal { height: auto !important; }
           .header-nav { padding: 0 16px !important; gap: 16px !important; }
           .header-logo { height: 40px !important; }
           .semelhantes-grid { grid-template-columns: 1fr !important; }
@@ -208,8 +208,8 @@ export default function ImovelClient() {
 
       {fotos.length > 0 && (
         <div style={{ background: '#0a0a0a', position: 'relative' }}>
-          <div style={{ width: '100%', overflow: 'hidden', position: 'relative' }} className="foto-principal">
-            <img src={fotos[fotoAtiva]} alt={imovel.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imovel.foto_posicao || 'center center', display: 'block' }} />
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', background: '#0a0a0a', position: 'relative' }} className="foto-principal">
+            <img src={fotos[fotoAtiva]} alt={imovel.titulo} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, rgba(10,10,10,0.8) 100%)' }} />
             <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', gap: '8px' }}>
               <span style={{ fontSize: '10px', letterSpacing: '2px', padding: '5px 12px', textTransform: 'uppercase', fontWeight: 500, background: imovel.tipo === 'venda' ? '#c9a84c' : 'transparent', color: imovel.tipo === 'venda' ? '#0a0a0a' : '#c9a84c', border: imovel.tipo === 'aluguel' ? '1px solid rgba(201,168,76,0.5)' : 'none' }}>
