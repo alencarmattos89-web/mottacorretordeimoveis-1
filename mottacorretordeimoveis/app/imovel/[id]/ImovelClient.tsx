@@ -209,7 +209,7 @@ export default function ImovelClient() {
       {fotos.length > 0 && (
         <div style={{ background: '#0a0a0a', position: 'relative' }}>
           <div style={{ width: '100%', overflow: 'hidden', position: 'relative' }} className="foto-principal">
-            <img src={fotos[fotoAtiva]} alt={imovel.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={fotos[fotoAtiva]} alt={imovel.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imovel.foto_posicao || 'center center', display: 'block' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, rgba(10,10,10,0.8) 100%)' }} />
             <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', gap: '8px' }}>
               <span style={{ fontSize: '10px', letterSpacing: '2px', padding: '5px 12px', textTransform: 'uppercase', fontWeight: 500, background: imovel.tipo === 'venda' ? '#c9a84c' : 'transparent', color: imovel.tipo === 'venda' ? '#0a0a0a' : '#c9a84c', border: imovel.tipo === 'aluguel' ? '1px solid rgba(201,168,76,0.5)' : 'none' }}>

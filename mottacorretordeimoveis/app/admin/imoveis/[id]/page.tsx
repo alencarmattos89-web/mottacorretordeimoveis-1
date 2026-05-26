@@ -335,6 +335,7 @@ export default function EditarImovel() {
   const [precoDisplay, setPrecoDisplay] = useState('')
   const [novasFotos, setNovasFotos] = useState<File[]>([])
   const [fotosExistentes, setFotosExistentes] = useState<string[]>([])
+  const [fotoPosicao, setFotoPosicao] = useState<string>('center center')
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [form, setForm] = useState<FormState>(formInicial)
   const [detalhes, setDetalhes] = useState<DetalhesState>(detalhesIniciais)
@@ -560,6 +561,7 @@ export default function EditarImovel() {
         ativo: form.ativo,
         mostrar_preco: form.mostrar_preco,
         fotos,
+        foto_posicao: fotoPosicao,
       }
 
       const detalhesParaSalvar: DetalhesState = {
@@ -1032,6 +1034,61 @@ export default function EditarImovel() {
           <section style={cardStyle}>
             <h2 style={sectionTitleStyle}>Fotos do imóvel</h2>
             <p style={{ color: '#6b6355', fontSize: '13px', marginBottom: '18px' }}>A primeira foto vira a capa no site. Arraste para reordenar ou use as setas. Vídeos, tour virtual e outros anexos não foram adicionados.</p>
+
+            {fotosExistentes.length > 0 && (() => {
+              const opcoes = [
+                { label: '↖', valor: 'top left' },
+                { label: '↑', valor: 'top center' },
+                { label: '↗', valor: 'top right' },
+                { label: '←', valor: 'center left' },
+                { label: '·', valor: 'center center' },
+                { label: '→', valor: 'center right' },
+                { label: '↙', valor: 'bottom left' },
+                { label: '↓', valor: 'bottom center' },
+                { label: '↘', valor: 'bottom right' },
+              ]
+              return (
+                <div style={{ marginBottom: '16px', background: '#14120f', border: '1px solid rgba(201,168,76,0.15)', padding: '14px 16px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '10px' }}>
+                    Posição da foto capa no site
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 32px)', gap: '4px' }}>
+                      {opcoes.map(op => (
+                        <button
+                          key={op.valor}
+                          type="button"
+                          title={op.valor}
+                          onClick={() => setFotoPosicao(op.valor)}
+                          style={{
+                            width: '32px', height: '32px',
+                            background: fotoPosicao === op.valor ? '#c9a84c' : '#1a1814',
+                            border: fotoPosicao === op.valor ? '1px solid #c9a84c' : '1px solid rgba(201,168,76,0.2)',
+                            color: fotoPosicao === op.valor ? '#0a0a0a' : '#a09880',
+                            fontSize: '14px', cursor: 'pointer', borderRadius: '2px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          {op.label}
+                        </button>
+                      ))}
+                    </div>
+                    {fotosExistentes[0] && (
+                      <div style={{ width: '120px', height: '72px', overflow: 'hidden', border: '1px solid rgba(201,168,76,0.25)', flexShrink: 0 }}>
+                        <img
+                          src={fotosExistentes[0]}
+                          alt="preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoPosicao, display: 'block' }}
+                        />
+                      </div>
+                    )}
+                    <p style={{ fontSize: '11px', color: '#4a4438', letterSpacing: '0.5px', maxWidth: '180px' }}>
+                      Ajusta o recorte da foto principal na página do imóvel
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
 
             {fotosExistentes.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '20px' }}>
