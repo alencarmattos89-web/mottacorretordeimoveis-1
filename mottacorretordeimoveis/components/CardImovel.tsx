@@ -77,7 +77,7 @@ export default function CardImovel({ imovel }: { imovel: any }) {
             <img
               src={imovel.fotos[0]}
               alt={imovel.titulo}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f0e0c' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: imovel.foto_posicao || 'center center' }}
             />
           ) : (
             <span style={{ color: '#3a3528', fontSize: '48px' }}>⌂</span>
