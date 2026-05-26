@@ -108,8 +108,8 @@ export default function NovoImovel() {
 
       if (error) throw error
       router.push('/admin/imoveis')
-    } catch (err) {
-      alert('Erro ao salvar. Tente novamente.')
+    } catch (err: any) {
+      alert('Erro ao salvar: ' + (err?.message || JSON.stringify(err)))
       setLoading(false)
     }
   }
