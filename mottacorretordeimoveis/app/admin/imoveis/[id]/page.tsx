@@ -589,13 +589,11 @@ export default function EditarImovel() {
           const { error: fallbackError } = await supabase.from('imoveis').update(payloadBase).eq('id', id)
           if (fallbackError) throw fallbackError
           alert('Dados principais salvos. Para salvar os campos administrativos do PDF, aplique a migration SQL criada pelo script.')
-          router.push('/admin/imoveis')
           return
         }
         throw error
       }
 
-      router.push('/admin/imoveis')
     } catch (error) {
       const mensagem = error instanceof Error ? error.message : 'Erro desconhecido.'
       setErro(`Erro ao salvar: ${mensagem}`)
@@ -936,7 +934,7 @@ export default function EditarImovel() {
                 </select>
               </Campo>
               <Campo label="Corretor responsável">
-                <input name="corretor_responsavel" value={detalhes.corretor_responsavel} onChange={handleDetalheChange} style={inputStyle} placeholder="Juliana Dill" />
+                <input name="corretor_responsavel" value={detalhes.corretor_responsavel} onChange={handleDetalheChange} style={inputStyle} placeholder="Nome do corretor" />
               </Campo>
               <Campo label="Captadores">
                 <input name="captadores" value={detalhes.captadores} onChange={handleDetalheChange} style={inputStyle} />
