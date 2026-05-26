@@ -589,11 +589,13 @@ export default function EditarImovel() {
           const { error: fallbackError } = await supabase.from('imoveis').update(payloadBase).eq('id', id)
           if (fallbackError) throw fallbackError
           alert('Dados principais salvos. Para salvar os campos administrativos do PDF, aplique a migration SQL criada pelo script.')
+          setSalvando(false)
           return
         }
         throw error
       }
 
+      setSalvando(false)
     } catch (error) {
       const mensagem = error instanceof Error ? error.message : 'Erro desconhecido.'
       setErro(`Erro ao salvar: ${mensagem}`)
