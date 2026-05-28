@@ -56,7 +56,16 @@ export async function aplicarMarcaDagua(file: File, settings: WatermarkSettings)
   if (!settings.ativo || !settings.logo) return file
 
   const foto = await arquivoParaImagem(file)
-  const logo = await carregarImagem(settings.logo)
+
+  // Fallback seguro: se a logo não carregar (CORS, URL inválida),
+  // sobe a foto sem marca d'água em vez de travar o upload inteiro.
+  let logo: HTMLImageElement
+  try {
+    logo = await carregarImagem(settings.logo)
+  } catch {
+    console.warn('[marca-dagua] Não foi possível carregar a logo — subindo sem marca d\'água.')
+    return file
+  }
   const canvas = document.createElement('canvas')
   canvas.width = foto.naturalWidth || foto.width
   canvas.height = foto.naturalHeight || foto.height

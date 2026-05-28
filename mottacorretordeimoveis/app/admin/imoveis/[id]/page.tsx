@@ -595,6 +595,8 @@ export default function EditarImovel() {
         throw error
       }
 
+      setNovasFotos([])
+      setAviso('✅ Imóvel salvo com sucesso! As fotos foram enviadas.')
       setSalvando(false)
     } catch (error) {
       const mensagem = error instanceof Error ? error.message : 'Erro desconhecido.'

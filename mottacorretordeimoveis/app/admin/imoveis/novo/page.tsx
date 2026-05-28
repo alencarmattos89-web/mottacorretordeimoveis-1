@@ -85,11 +85,22 @@ export default function NovoImovel() {
       const urlsFotos: string[] = []
       for (const foto of fotos) {
         const nomeArquivo = `${Date.now()}-${foto.name.replace(/\s/g, '-')}`
-        const { data, error } = await supabase.storage.from('fotos-imoveis').upload(nomeArquivo, foto, { cacheControl: '3600', upsert: false })
-        if (!error && data) {
-          const { data: urlData } = supabase.storage.from('fotos-imoveis').getPublicUrl(data.path)
-          urlsFotos.push(urlData.publicUrl)
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('fotos-imoveis')
+          .upload(nomeArquivo, foto, { cacheControl: '3600', upsert: false, contentType: foto.type })
+
+        if (uploadError) {
+          throw new Error(`Falha ao subir "${foto.name}": ${uploadError.message}. Confirme o bucket fotos-imoveis e as políticas de upload no Supabase.`)
         }
+        if (!uploadData?.path) {
+          throw new Error(`Falha ao subir "${foto.name}": o Supabase não retornou o caminho do arquivo.`)
+        }
+
+        const { data: urlData } = supabase.storage.from('fotos-imoveis').getPublicUrl(uploadData.path)
+        if (!urlData?.publicUrl) {
+          throw new Error(`Falha ao gerar URL pública da foto "${foto.name}".`)
+        }
+        urlsFotos.push(urlData.publicUrl)
       }
 
       const { error } = await supabase.from('imoveis').insert({
