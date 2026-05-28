@@ -6,7 +6,7 @@ import type { ChangeEvent, DragEvent, FormEvent, CSSProperties, ReactNode } from
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/LogoutButton'
-import { aplicarMarcaDagua, type WatermarkSettings } from '@/lib/image-watermark'
+import { aplicarMarcaDagua, comprimirFoto, type WatermarkSettings } from '@/lib/image-watermark'
 
 type FormState = {
   titulo: string

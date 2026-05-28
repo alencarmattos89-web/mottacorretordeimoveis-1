@@ -1,5 +1,6 @@
 'use client'
 import { supabase } from '@/lib/supabase-browser'
+import { comprimirFoto } from '@/lib/image-watermark'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -84,10 +85,11 @@ export default function NovoImovel() {
 
       const urlsFotos: string[] = []
       for (const foto of fotos) {
-        const nomeArquivo = `${Date.now()}-${foto.name.replace(/\s/g, '-')}`
+        const fotoComprimida = await comprimirFoto(foto)
+        const nomeArquivo = `${Date.now()}-${fotoComprimida.name.replace(/\s/g, '-')}`
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('fotos-imoveis')
-          .upload(nomeArquivo, foto, { cacheControl: '3600', upsert: false, contentType: foto.type })
+          .upload(nomeArquivo, fotoComprimida, { cacheControl: '3600', upsert: false, contentType: fotoComprimida.type })
 
         if (uploadError) {
           throw new Error(`Falha ao subir "${foto.name}": ${uploadError.message}. Confirme o bucket fotos-imoveis e as políticas de upload no Supabase.`)
