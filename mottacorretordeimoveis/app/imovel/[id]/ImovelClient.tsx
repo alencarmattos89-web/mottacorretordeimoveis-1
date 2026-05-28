@@ -15,6 +15,30 @@ const IconeWhatsApp = () => (
   </svg>
 )
 
+// ─── Helpers de telefone ──────────────────────────────────────────────────────
+
+/** Aplica máscara brasileira: (99) 99999-9999 ou (99) 9999-9999 */
+function mascaraTelefone(valor: string): string {
+  const digits = valor.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits.length ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10)
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+/** Formata para exibição amigável no modal de confirmação */
+function formatarParaExibicao(valor: string): string {
+  return mascaraTelefone(valor.replace(/\D/g, ''))
+}
+
+/** Retorna true se o telefone tem ao menos 10 dígitos (mínimo aceitável) */
+function telefoneValido(valor: string): boolean {
+  return valor.replace(/\D/g, '').length >= 10
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ImovelClient() {
   const params = useParams()
   const id = params.id as string
@@ -29,6 +53,10 @@ export default function ImovelClient() {
   const [whatsapp, setWhatsapp] = useState('5555992290166')
   const [creci, setCreci] = useState('12.857')
   const [cidade, setCidade] = useState('Cruz Alta — RS')
+
+  // ── Modal de confirmação de telefone ──
+  const [modalConfirmacao, setModalConfirmacao] = useState(false)
+  const [erroTelefone, setErroTelefone] = useState('')
 
   useEffect(() => {
     async function carregar() {
@@ -87,10 +115,23 @@ export default function ImovelClient() {
     return data
   }
 
-  async function handleSubmit(e: any) {
+  // ── Passo 1: valida telefone e abre o modal de confirmação ──
+  function handleSubmit(e: any) {
     e.preventDefault()
-    setEnviando(true)
+    setErroTelefone('')
 
+    if (!telefoneValido(form.telefone)) {
+      setErroTelefone('Digite um número válido com DDD (ex: 55 99999-9999).')
+      return
+    }
+
+    setModalConfirmacao(true)
+  }
+
+  // ── Passo 2: cliente confirmou → envia de verdade ──
+  async function confirmarEEnviar() {
+    setModalConfirmacao(false)
+    setEnviando(true)
     try {
       await registrarLead('formulario', form)
       setEnviado(true)
@@ -184,6 +225,56 @@ export default function ImovelClient() {
           .whatsapp-fixo { display: flex !important; }
         }
       `}</style>
+
+      {/* ── Modal de confirmação de telefone ── */}
+      {modalConfirmacao && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: '#0f0e0c',
+            border: '1px solid rgba(201,168,76,0.35)',
+            padding: '36px 32px',
+            maxWidth: '380px', width: '100%',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '10px', letterSpacing: '3px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>
+              Confirme seu número
+            </p>
+            <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300, marginBottom: '8px', letterSpacing: '1px' }}>
+              {formatarParaExibicao(form.telefone)}
+            </p>
+            <p style={{ fontSize: '13px', color: '#6b6355', marginBottom: '28px', lineHeight: 1.6 }}>
+              Esse é o número certo?<br />Usaremos para entrar em contato com você.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setModalConfirmacao(false)}
+                style={{
+                  flex: 1, padding: '13px', background: 'transparent',
+                  border: '1px solid rgba(201,168,76,0.3)', color: '#a09880',
+                  fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase',
+                  cursor: 'pointer', fontWeight: 500,
+                }}>
+                Corrigir
+              </button>
+              <button
+                onClick={confirmarEEnviar}
+                style={{
+                  flex: 1, padding: '13px', background: '#c9a84c',
+                  border: 'none', color: '#0a0a0a',
+                  fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase',
+                  cursor: 'pointer', fontWeight: 700,
+                }}>
+                Está correto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Botão WhatsApp flutuante para mobile */}
       <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
@@ -328,18 +419,62 @@ export default function ImovelClient() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  {[
-                    { label: 'Nome', name: 'nome', type: 'text', required: true },
-                    { label: 'Telefone', name: 'telefone', type: 'tel', required: true },
-                    { label: 'E-mail (opcional)', name: 'email', type: 'email', required: false },
-                  ].map(({ label, name, type, required }) => (
-                    <div key={name} style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</label>
-                      <input type={type} required={required} value={(form as any)[name]}
-                        onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))}
-                        style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-                    </div>
-                  ))}
+                  {/* Nome */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>Nome</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.nome}
+                      onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  {/* Telefone com máscara e validação */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Telefone / WhatsApp *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="(55) 99999-9999"
+                      value={form.telefone}
+                      onChange={e => {
+                        const mascarado = mascaraTelefone(e.target.value)
+                        setForm(f => ({ ...f, telefone: mascarado }))
+                        if (erroTelefone) setErroTelefone('')
+                      }}
+                      style={{
+                        width: '100%',
+                        background: '#1a1814',
+                        border: `1px solid ${erroTelefone ? '#e05c5c' : 'rgba(201,168,76,0.2)'}`,
+                        color: '#e8e0d0',
+                        padding: '10px 14px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                    {erroTelefone && (
+                      <p style={{ color: '#e05c5c', fontSize: '11px', marginTop: '5px', letterSpacing: '0.5px' }}>
+                        {erroTelefone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* E-mail (opcional) */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>E-mail (opcional)</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
                   <button type="submit" disabled={enviando}
                     style={{ width: '100%', background: '#c9a84c', color: '#0a0a0a', border: 'none', padding: '14px', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600, cursor: enviando ? 'wait' : 'pointer', marginTop: '8px', opacity: enviando ? 0.7 : 1, transition: 'opacity 0.2s' }}>
                     {enviando ? 'Enviando...' : 'Demonstrar interesse'}
