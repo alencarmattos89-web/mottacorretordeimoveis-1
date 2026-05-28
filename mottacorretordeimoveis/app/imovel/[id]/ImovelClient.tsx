@@ -15,9 +15,6 @@ const IconeWhatsApp = () => (
   </svg>
 )
 
-// ─── Helpers de telefone ──────────────────────────────────────────────────────
-
-/** Aplica máscara brasileira: (99) 99999-9999 ou (99) 9999-9999 */
 function mascaraTelefone(valor: string): string {
   const digits = valor.replace(/\D/g, '').slice(0, 11)
   if (digits.length <= 2) return digits.length ? `(${digits}` : ''
@@ -27,17 +24,13 @@ function mascaraTelefone(valor: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
-/** Formata para exibição amigável no modal de confirmação */
 function formatarParaExibicao(valor: string): string {
   return mascaraTelefone(valor.replace(/\D/g, ''))
 }
 
-/** Retorna true se o telefone tem ao menos 10 dígitos (mínimo aceitável) */
 function telefoneValido(valor: string): boolean {
   return valor.replace(/\D/g, '').length >= 10
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ImovelClient() {
   const params = useParams()
@@ -53,8 +46,6 @@ export default function ImovelClient() {
   const [whatsapp, setWhatsapp] = useState('5555992290166')
   const [creci, setCreci] = useState('12.857')
   const [cidade, setCidade] = useState('Cruz Alta — RS')
-
-  // ── Modal de confirmação de telefone ──
   const [modalConfirmacao, setModalConfirmacao] = useState(false)
   const [erroTelefone, setErroTelefone] = useState('')
 
@@ -93,7 +84,6 @@ export default function ImovelClient() {
 
   async function registrarLead(origem: 'formulario' | 'whatsapp_click', dados: Partial<typeof form> = {}) {
     const paginaUrl = typeof window !== 'undefined' ? `${window.location.origin}/imovel/${imovel.id}` : null
-
     const res = await fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -109,26 +99,21 @@ export default function ImovelClient() {
         temperatura: origem === 'whatsapp_click' ? 'quente' : 'morno',
       }),
     })
-
     const data = await res.json()
     if (!res.ok) throw new Error(data?.error || 'Erro ao criar lead')
     return data
   }
 
-  // ── Passo 1: valida telefone e abre o modal de confirmação ──
   function handleSubmit(e: any) {
     e.preventDefault()
     setErroTelefone('')
-
     if (!telefoneValido(form.telefone)) {
       setErroTelefone('Digite um número válido com DDD (ex: 55 99999-9999).')
       return
     }
-
     setModalConfirmacao(true)
   }
 
-  // ── Passo 2: cliente confirmou → envia de verdade ──
   async function confirmarEEnviar() {
     setModalConfirmacao(false)
     setEnviando(true)
@@ -151,16 +136,13 @@ export default function ImovelClient() {
       leadId ? `Código do atendimento: #${leadId}` : '',
       url ? `Link: ${url}` : '',
     ].filter(Boolean)
-
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(linhas.join('\n'))}`
   }
 
   async function handleWhatsAppClick(e: any) {
     e.preventDefault()
-
     const fallbackUrl = mensagemWhatsApp()
     const janela = window.open('', '_blank', 'noopener,noreferrer')
-
     try {
       const data = await registrarLead('whatsapp_click')
       const url = data?.whatsapp_url || mensagemWhatsApp(data?.id)
@@ -202,7 +184,7 @@ export default function ImovelClient() {
       <style>{`
         .detalhe-grid { display: grid; grid-template-columns: 1fr 360px; gap: 48px; align-items: start; }
         .sidebar { position: sticky; top: 96px; }
-        .foto-principal { height: auto; }
+        .foto-principal { height: clamp(220px, 56vw, 600px); overflow: hidden; }
         .header-logo { height: 52px; }
         .header-nav { padding: 0 32px; }
         .detalhe-content { padding: 56px 32px; max-width: 1100px; margin: 0 auto; }
@@ -215,7 +197,7 @@ export default function ImovelClient() {
         @media (max-width: 768px) {
           .detalhe-grid { grid-template-columns: 1fr !important; }
           .sidebar { position: static !important; top: auto !important; }
-          .foto-principal { height: auto !important; }
+          .foto-principal { height: clamp(220px, 56vw, 600px) !important; }
           .header-nav { padding: 0 16px !important; gap: 16px !important; }
           .header-logo { height: 40px !important; }
           .semelhantes-grid { grid-template-columns: 1fr !important; }
@@ -226,57 +208,20 @@ export default function ImovelClient() {
         }
       `}</style>
 
-      {/* ── Modal de confirmação de telefone ── */}
       {modalConfirmacao && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(0,0,0,0.85)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px',
-        }}>
-          <div style={{
-            background: '#0f0e0c',
-            border: '1px solid rgba(201,168,76,0.35)',
-            padding: '36px 32px',
-            maxWidth: '380px', width: '100%',
-            textAlign: 'center',
-          }}>
-            <p style={{ fontSize: '10px', letterSpacing: '3px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>
-              Confirme seu número
-            </p>
-            <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300, marginBottom: '8px', letterSpacing: '1px' }}>
-              {formatarParaExibicao(form.telefone)}
-            </p>
-            <p style={{ fontSize: '13px', color: '#6b6355', marginBottom: '28px', lineHeight: 1.6 }}>
-              Esse é o número certo?<br />Usaremos para entrar em contato com você.
-            </p>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#0f0e0c', border: '1px solid rgba(201,168,76,0.35)', padding: '36px 32px', maxWidth: '380px', width: '100%', textAlign: 'center' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '3px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>Confirme seu número</p>
+            <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300, marginBottom: '8px', letterSpacing: '1px' }}>{formatarParaExibicao(form.telefone)}</p>
+            <p style={{ fontSize: '13px', color: '#6b6355', marginBottom: '28px', lineHeight: 1.6 }}>Esse é o número certo?<br />Usaremos para entrar em contato com você.</p>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => setModalConfirmacao(false)}
-                style={{
-                  flex: 1, padding: '13px', background: 'transparent',
-                  border: '1px solid rgba(201,168,76,0.3)', color: '#a09880',
-                  fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase',
-                  cursor: 'pointer', fontWeight: 500,
-                }}>
-                Corrigir
-              </button>
-              <button
-                onClick={confirmarEEnviar}
-                style={{
-                  flex: 1, padding: '13px', background: '#c9a84c',
-                  border: 'none', color: '#0a0a0a',
-                  fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase',
-                  cursor: 'pointer', fontWeight: 700,
-                }}>
-                Está correto
-              </button>
+              <button onClick={() => setModalConfirmacao(false)} style={{ flex: 1, padding: '13px', background: 'transparent', border: '1px solid rgba(201,168,76,0.3)', color: '#a09880', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 500 }}>Corrigir</button>
+              <button onClick={confirmarEEnviar} style={{ flex: 1, padding: '13px', background: '#c9a84c', border: 'none', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', cursor: 'pointer', fontWeight: 700 }}>Está correto</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Botão WhatsApp flutuante para mobile */}
       <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
         className="whatsapp-fixo"
         style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 100, background: '#25D366', color: '#fff', borderRadius: '50px', padding: '14px 20px', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, textDecoration: 'none', alignItems: 'center', gap: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
@@ -284,25 +229,23 @@ export default function ImovelClient() {
         <span>WhatsApp</span>
       </a>
 
-      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}
-        className="header-nav">
+      <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }} className="header-nav">
         <Link href="/"><img src="https://wabkkqbgfwufmxjutxsr.supabase.co/storage/v1/object/public/assets/LOGO%20MOTTA%20site.png" alt="Motta Corretor" className="header-logo" style={{ objectFit: 'contain' }} /></Link>
         <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
           <Link href="/" style={{ color: '#a09880', fontSize: '12px', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none' }}>← Imóveis</Link>
-          <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
-            className="whatsapp-btn-header"
-            style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>
-            WhatsApp
-          </a>
+          <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer" className="whatsapp-btn-header" style={{ background: '#c9a84c', color: '#0a0a0a', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', padding: '10px 20px', fontWeight: 600, textDecoration: 'none' }}>WhatsApp</a>
         </nav>
       </header>
 
       {fotos.length > 0 && (
         <div style={{ background: '#0a0a0a', position: 'relative' }}>
           <div style={{ width: '100%', display: 'flex', justifyContent: 'center', background: '#0a0a0a', position: 'relative' }} className="foto-principal">
-            <img src={fotos[fotoAtiva]} alt={imovel.titulo} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, rgba(10,10,10,0.8) 100%)' }} />
-            <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', gap: '8px' }}>
+            <img src={fotos[fotoAtiva]} alt="" aria-hidden="true"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(22px)', transform: 'scale(1.08)', opacity: 0.4, display: 'block' }} />
+            <img src={fotos[fotoAtiva]} alt={imovel.titulo}
+              style={{ position: 'relative', zIndex: 1, maxWidth: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 60%, rgba(10,10,10,0.8) 100%)', zIndex: 2 }} />
+            <div style={{ position: 'absolute', top: '24px', left: '24px', display: 'flex', gap: '8px', zIndex: 3 }}>
               <span style={{ fontSize: '10px', letterSpacing: '2px', padding: '5px 12px', textTransform: 'uppercase', fontWeight: 500, background: imovel.tipo === 'venda' ? '#c9a84c' : 'transparent', color: imovel.tipo === 'venda' ? '#0a0a0a' : '#c9a84c', border: imovel.tipo === 'aluguel' ? '1px solid rgba(201,168,76,0.5)' : 'none' }}>
                 {imovel.tipo === 'venda' ? 'Venda' : 'Aluguel'}
               </span>
@@ -311,10 +254,10 @@ export default function ImovelClient() {
             {fotos.length > 1 && (
               <>
                 <button className="nav-arrow" onClick={() => setFotoAtiva(f => Math.max(0, f - 1))} disabled={fotoAtiva === 0}
-                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.3)', color: '#e8e0d0', width: '48px', height: '48px', cursor: 'pointer', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>‹</button>
+                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.3)', color: '#e8e0d0', width: '48px', height: '48px', cursor: 'pointer', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', zIndex: 3 }}>‹</button>
                 <button className="nav-arrow" onClick={() => setFotoAtiva(f => Math.min(fotos.length - 1, f + 1))} disabled={fotoAtiva === fotos.length - 1}
-                  style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.3)', color: '#e8e0d0', width: '48px', height: '48px', cursor: 'pointer', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>›</button>
-                <div style={{ position: 'absolute', bottom: '16px', right: '24px', color: '#a09880', fontSize: '12px', letterSpacing: '2px', background: 'rgba(10,10,10,0.6)', padding: '4px 10px' }}>{fotoAtiva + 1} / {fotos.length}</div>
+                  style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.3)', color: '#e8e0d0', width: '48px', height: '48px', cursor: 'pointer', fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', zIndex: 3 }}>›</button>
+                <div style={{ position: 'absolute', bottom: '16px', right: '24px', color: '#a09880', fontSize: '12px', letterSpacing: '2px', background: 'rgba(10,10,10,0.6)', padding: '4px 10px', zIndex: 3 }}>{fotoAtiva + 1} / {fotos.length}</div>
               </>
             )}
           </div>
@@ -333,75 +276,40 @@ export default function ImovelClient() {
 
       <div className="detalhe-content">
         <div className="detalhe-grid">
-          {/* Coluna principal */}
           <div>
-            <p style={{ fontSize: '11px', letterSpacing: '3px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '8px' }}>
-              {[imovel.bairro, imovel.cidade].filter(Boolean).join(' · ')}
-            </p>
+            <p style={{ fontSize: '11px', letterSpacing: '3px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '8px' }}>{[imovel.bairro, imovel.cidade].filter(Boolean).join(' · ')}</p>
             <h1 style={{ fontFamily: 'Georgia,serif', fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 300, color: '#e8e0d0', lineHeight: 1.2, marginBottom: '16px' }}>{imovel.titulo}</h1>
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
               <p style={{ fontFamily: 'Georgia,serif', fontSize: 'clamp(22px, 3.5vw, 32px)', color: '#c9a84c', fontWeight: 400 }}>
-                {imovel.mostrar_preco === false
-                  ? 'Sob consulta'
-                  : <>R$ {Number(imovel.preco).toLocaleString('pt-BR')}{imovel.tipo === 'aluguel' && <span style={{ fontSize: '16px', color: '#6b6355', fontFamily: 'system-ui' }}>/mês</span>}</>
-                }
+                {imovel.mostrar_preco === false ? 'Sob consulta' : <>R$ {Number(imovel.preco).toLocaleString('pt-BR')}{imovel.tipo === 'aluguel' && <span style={{ fontSize: '16px', color: '#6b6355', fontFamily: 'system-ui' }}>/mês</span>}</>}
               </p>
-              <button onClick={compartilharWhatsApp}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: compartilhado ? '#25D366' : 'transparent', border: `1px solid ${compartilhado ? '#25D366' : 'rgba(37,211,102,0.4)'}`, color: compartilhado ? '#fff' : '#25D366', padding: '10px 18px', fontSize: '12px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <button onClick={compartilharWhatsApp} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: compartilhado ? '#25D366' : 'transparent', border: `1px solid ${compartilhado ? '#25D366' : 'rgba(37,211,102,0.4)'}`, color: compartilhado ? '#fff' : '#25D366', padding: '10px 18px', fontSize: '12px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.2s' }}>
                 <IconeWhatsApp />
                 <span>{compartilhado ? 'Link enviado!' : 'Compartilhar'}</span>
               </button>
             </div>
-
-            {/* Stats */}
             {(imovel.area > 0 || imovel.quartos > 0 || imovel.banheiros > 0 || imovel.vagas > 0) && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1px', background: 'rgba(201,168,76,0.15)', marginBottom: '40px' }}>
-                {imovel.area > 0 && (
-                  <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.area}</p>
-                    <p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>m²</p>
-                  </div>
-                )}
-                {imovel.quartos > 0 && (
-                  <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.quartos}</p>
-                    <p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Quartos</p>
-                  </div>
-                )}
-                {imovel.banheiros > 0 && (
-                  <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.banheiros}</p>
-                    <p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Banheiros</p>
-                  </div>
-                )}
-                {imovel.vagas > 0 && (
-                  <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}>
-                    <p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.vagas}</p>
-                    <p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Vagas</p>
-                  </div>
-                )}
+                {imovel.area > 0 && <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}><p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.area}</p><p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>m²</p></div>}
+                {imovel.quartos > 0 && <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}><p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.quartos}</p><p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Quartos</p></div>}
+                {imovel.banheiros > 0 && <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}><p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.banheiros}</p><p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Banheiros</p></div>}
+                {imovel.vagas > 0 && <div style={{ background: '#0f0e0c', padding: '20px 24px', flex: '1', minWidth: '80px', textAlign: 'center' }}><p style={{ fontFamily: 'Georgia,serif', fontSize: '28px', color: '#e8e0d0', fontWeight: 300 }}>{imovel.vagas}</p><p style={{ fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase' }}>Vagas</p></div>}
               </div>
             )}
-
             {imovel.descricao && (
               <div style={{ marginBottom: '40px' }}>
                 <p style={{ fontSize: '11px', letterSpacing: '3px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '16px' }}>Descrição</p>
                 <p style={{ color: '#a09880', fontSize: '15px', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{imovel.descricao}</p>
               </div>
             )}
-
             {imovel.endereco && (
               <div>
                 <p style={{ fontSize: '11px', letterSpacing: '3px', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '8px' }}>Localização</p>
-                <p style={{ color: '#6b6355', fontSize: '14px', letterSpacing: '1px' }}>
-                  {[imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')}
-                </p>
+                <p style={{ color: '#6b6355', fontSize: '14px', letterSpacing: '1px' }}>{[imovel.endereco, imovel.bairro, imovel.cidade].filter(Boolean).join(', ')}</p>
               </div>
             )}
           </div>
 
-          {/* Sidebar */}
           <div className="sidebar">
             <a href={mensagemWhatsApp()} onClick={handleWhatsAppClick} target="_blank" rel="noreferrer"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#25D366', color: '#fff', padding: '18px', fontSize: '13px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, textDecoration: 'none', marginBottom: '1px' }}>
@@ -419,62 +327,23 @@ export default function ImovelClient() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  {/* Nome */}
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>Nome</label>
-                    <input
-                      type="text"
-                      required
-                      value={form.nome}
-                      onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
-                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                    />
+                    <input type="text" required value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
-
-                  {/* Telefone com máscara e validação */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Telefone / WhatsApp *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="(55) 99999-9999"
-                      value={form.telefone}
-                      onChange={e => {
-                        const mascarado = mascaraTelefone(e.target.value)
-                        setForm(f => ({ ...f, telefone: mascarado }))
-                        if (erroTelefone) setErroTelefone('')
-                      }}
-                      style={{
-                        width: '100%',
-                        background: '#1a1814',
-                        border: `1px solid ${erroTelefone ? '#e05c5c' : 'rgba(201,168,76,0.2)'}`,
-                        color: '#e8e0d0',
-                        padding: '10px 14px',
-                        fontSize: '14px',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                    {erroTelefone && (
-                      <p style={{ color: '#e05c5c', fontSize: '11px', marginTop: '5px', letterSpacing: '0.5px' }}>
-                        {erroTelefone}
-                      </p>
-                    )}
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>Telefone / WhatsApp *</label>
+                    <input type="tel" required placeholder="(55) 99999-9999" value={form.telefone}
+                      onChange={e => { const m = mascaraTelefone(e.target.value); setForm(f => ({ ...f, telefone: m })); if (erroTelefone) setErroTelefone('') }}
+                      style={{ width: '100%', background: '#1a1814', border: `1px solid ${erroTelefone ? '#e05c5c' : 'rgba(201,168,76,0.2)'}`, color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    {erroTelefone && <p style={{ color: '#e05c5c', fontSize: '11px', marginTop: '5px' }}>{erroTelefone}</p>}
                   </div>
-
-                  {/* E-mail (opcional) */}
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', fontSize: '10px', letterSpacing: '2px', color: '#6b6355', textTransform: 'uppercase', marginBottom: '6px' }}>E-mail (opcional)</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                    />
+                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                      style={{ width: '100%', background: '#1a1814', border: '1px solid rgba(201,168,76,0.2)', color: '#e8e0d0', padding: '10px 14px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
-
                   <button type="submit" disabled={enviando}
                     style={{ width: '100%', background: '#c9a84c', color: '#0a0a0a', border: 'none', padding: '14px', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600, cursor: enviando ? 'wait' : 'pointer', marginTop: '8px', opacity: enviando ? 0.7 : 1, transition: 'opacity 0.2s' }}>
                     {enviando ? 'Enviando...' : 'Demonstrar interesse'}
@@ -496,10 +365,7 @@ export default function ImovelClient() {
                 <Link key={s.id} href={`/imovel/${s.id}`} style={{ textDecoration: 'none' }}>
                   <div className="card-semelhante" style={{ background: '#0f0e0c', cursor: 'pointer', transition: 'opacity 0.2s' }}>
                     <div style={{ height: '180px', background: '#1a1814', position: 'relative', overflow: 'hidden' }}>
-                      {s.fotos?.[0]
-                        ? <img src={s.fotos[0]} alt={s.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#3a3528', fontSize: '36px' }}>⌂</span></div>
-                      }
+                      {s.fotos?.[0] ? <img src={s.fotos[0]} alt={s.titulo} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#3a3528', fontSize: '36px' }}>⌂</span></div>}
                       <span style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '9px', letterSpacing: '2px', padding: '3px 8px', textTransform: 'uppercase', fontWeight: 500, background: s.tipo === 'venda' ? '#c9a84c' : 'transparent', color: s.tipo === 'venda' ? '#0a0a0a' : '#c9a84c', border: s.tipo === 'aluguel' ? '1px solid rgba(201,168,76,0.5)' : 'none' }}>
                         {s.tipo === 'venda' ? 'Venda' : 'Aluguel'}
                       </span>
