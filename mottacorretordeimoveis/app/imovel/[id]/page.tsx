@@ -1,12 +1,15 @@
 import { createClient } from '@/lib/supabase-server'
 import ImovelClient from './ImovelClient'
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+// Next.js 16+: params é uma Promise — precisa de await
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('imoveis')
     .select('titulo, descricao, fotos, preco, tipo, categoria, cidade, bairro')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('ativo', true)
     .single()
 
@@ -14,7 +17,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
   const preco = `R$ ${Number(data.preco).toLocaleString('pt-BR')}`
   const titulo = `${data.titulo} — ${preco}`
-  const descricao = data.descricao?.slice(0, 155) ||
+  const descricao =
+    data.descricao?.slice(0, 155) ||
     `${data.categoria || 'Imóvel'} à ${data.tipo} em ${data.bairro}, ${data.cidade}. ${preco}.`
 
   return {
@@ -34,6 +38,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   }
 }
 
-export default function ImovelPage() {
-  return <ImovelClient />
+// Next.js 16+: props.params também é Promise no Page component
+export default async function ImovelPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  return <ImovelClient id={id} />
 }

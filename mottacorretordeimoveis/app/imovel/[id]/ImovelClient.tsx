@@ -32,9 +32,9 @@ function telefoneValido(valor: string): boolean {
   return valor.replace(/\D/g, '').length >= 10
 }
 
-export default function ImovelClient() {
+export default function ImovelClient({ id: idProp }: { id?: string }) {
   const params = useParams()
-  const id = params.id as string
+  const id = (idProp ?? params?.id) as string
   const [imovel, setImovel] = useState<any>(null)
   const [semelhantes, setSemelhantes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
