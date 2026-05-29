@@ -9,11 +9,12 @@ const supabase = createClient(
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: imoveis } = await supabase
     .from('imoveis')
-    .select('id, updated_at')
+    .select('id, created_at')
+    .eq('ativo', true)
 
   const imoveisUrls = (imoveis || []).map((imovel) => ({
     url: `https://www.mottacorretordeimoveis.com.br/imovel/${imovel.id}`,
-    lastModified: imovel.updated_at,
+    lastModified: imovel.created_at,
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
