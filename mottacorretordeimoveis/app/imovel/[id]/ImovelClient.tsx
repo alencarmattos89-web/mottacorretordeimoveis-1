@@ -32,12 +32,12 @@ function telefoneValido(valor: string): boolean {
   return valor.replace(/\D/g, '').length >= 10
 }
 
-export default function ImovelClient({ id: idProp }: { id?: string }) {
+export default function ImovelClient({ id: idProp, imovelInicial }: { id?: string; imovelInicial?: any }) {
   const params = useParams()
   const id = (idProp ?? params?.id) as string
-  const [imovel, setImovel] = useState<any>(null)
+  const [imovel, setImovel] = useState<any>(imovelInicial || null)
   const [semelhantes, setSemelhantes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!imovelInicial)
   const [fotoAtiva, setFotoAtiva] = useState(0)
   const [form, setForm] = useState({ nome: '', telefone: '', email: '' })
   const [enviando, setEnviando] = useState(false)
@@ -51,11 +51,14 @@ export default function ImovelClient({ id: idProp }: { id?: string }) {
 
   useEffect(() => {
     async function carregar() {
-      const [{ data }, { data: config }] = await Promise.all([
-        supabase.from('imoveis').select('*').eq('id', id).eq('ativo', true).single(),
+      const [imovelData, { data: config }] = await Promise.all([
+        imovelInicial
+          ? Promise.resolve({ data: imovelInicial })
+          : supabase.from('imoveis').select('*').eq('id', id).eq('ativo', true).single(),
         supabase.from('configuracoes').select('whatsapp,creci,cidade').eq('id', 'site').single(),
       ])
-      setImovel(data)
+      const data = imovelInicial || (imovelData as any).data
+      if (!imovelInicial) setImovel(data)
       if (config) {
         if (config.whatsapp) setWhatsapp(config.whatsapp)
         if (config.creci) setCreci(config.creci)
