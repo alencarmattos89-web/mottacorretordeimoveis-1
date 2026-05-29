@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Motta Corretor de Imóveis — Panambi e Região",
   description: "Imóveis de alto padrão em Panambi e região. Venda, aluguel e consultoria. CRECI 12.857.",
+  verification: {
+    google: "eUMnCLtSNFVkypPImDt8HPiL7qJu5lliPXzubRYRLrM",
+  },
 };
 
 export default function RootLayout({
