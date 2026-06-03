@@ -37,7 +37,7 @@ type SiteConfig = {
   rodape_texto: string
 }
 
-const abas = ['Hero', 'Banners', 'Marca d’água', 'Imóveis', 'Geral']
+const abas = ['Hero', 'Banners', 'Marca d\'água', 'Imóveis', 'Geral']
 
 const configPadrao: SiteConfig = {
   id: 'site',
@@ -103,18 +103,21 @@ export default function ConfiguracoesAdmin() {
   const [erro, setErro] = useState('')
   const [uploadando, setUploadando] = useState('')
   const [config, setConfig] = useState<SiteConfig>(configPadrao)
+  const [loadingConfig, setLoadingConfig] = useState(true)
 
   useEffect(() => {
     void carregarConfig()
   }, [])
 
   async function carregarConfig() {
+    setLoadingConfig(true)
     const { data, error } = await supabase.from('configuracoes').select('*').eq('id', 'site').single()
     if (error && error.code !== 'PGRST116') {
       setErro(`Não foi possível carregar as configurações: ${error.message}`)
       return
     }
     setConfig(normalizarConfig(data as Partial<SiteConfig> | null))
+    setLoadingConfig(false)
   }
 
   function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -387,7 +390,7 @@ export default function ConfiguracoesAdmin() {
           </div>
         )}
 
-        {abaAtiva === 'Marca d’água' && (
+        {abaAtiva === 'Marca d\'água' && (
           <div style={{ display: 'grid', gap: '20px' }}>
             <div style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
               <div>
@@ -479,7 +482,7 @@ export default function ConfiguracoesAdmin() {
         )}
 
         <div style={{ marginTop: '40px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button onClick={salvar} disabled={salvando} style={{ background: '#c9a84c', color: '#0a0a0a', border: 'none', padding: '14px 40px', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? 0.7 : 1 }}>
+          <button onClick={salvar} disabled={salvando || loadingConfig} style={{ background: '#c9a84c', color: '#0a0a0a', border: 'none', padding: '14px 40px', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600, cursor: salvando ? 'not-allowed' : 'pointer', opacity: salvando ? 0.7 : 1 }}>
             {salvando ? 'Salvando...' : 'Salvar configurações'}
           </button>
           {salvo && <p style={{ color: '#61ce70', fontSize: '12px', letterSpacing: '1px' }}>✓ Salvo com sucesso!</p>}

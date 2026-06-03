@@ -69,6 +69,8 @@ export default function ImovelClient({ id: idProp, imovelInicial }: { id?: strin
     }
     carregar()
     setFotoAtiva(0)
+    setEnviado(false)
+    setForm({ nome: '', telefone: '', email: '' })
   }, [id])
 
   async function carregarSemelhantes(atual: any) {

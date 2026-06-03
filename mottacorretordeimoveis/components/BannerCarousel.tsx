@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type BannerCarouselProps = {
   images: string[]
@@ -8,7 +8,7 @@ type BannerCarouselProps = {
 }
 
 export default function BannerCarousel({ images, intervalSeconds = 5 }: BannerCarouselProps) {
-  const imagens = images.filter(Boolean)
+  const imagens = useMemo(() => images.filter(Boolean), [images])
   const [index, setIndex] = useState(0)
 
   useEffect(() => {

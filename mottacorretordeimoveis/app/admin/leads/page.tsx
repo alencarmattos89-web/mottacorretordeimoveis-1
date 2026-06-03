@@ -13,7 +13,7 @@ const supabase = createBrowserClient(
 const STATUS_LABELS: Record<string, { label: string; cor: string }> = {
   novo: { label: 'Novo', cor: '#c9a84c' },
   primeiro_contato: { label: '1º contato', cor: '#5b9bd5' },
-  contato: { label: 'Contato', cor: '#5b9bd5' },
+  contato: { label: '1º contato', cor: '#5b9bd5' },
   qualificado: { label: 'Qualificado', cor: '#61ce70' },
   visita: { label: 'Visita', cor: '#9b59b6' },
   proposta: { label: 'Proposta', cor: '#e67e22' },
@@ -128,7 +128,7 @@ export default function LeadsAdmin() {
       return
     }
 
-    await carregarLeads()
+    await carregarLeads(mostrarArquivados)
   }
 
   async function arquivarLead(id: string, arquivar: boolean) {
@@ -146,13 +146,22 @@ export default function LeadsAdmin() {
   }
 
   async function salvarLead(id: string) {
-    await atualizarLead(id, {
-      status: rascunho.status,
-      temperatura: rascunho.temperatura,
-      preferencias: rascunho.preferencias,
-      anotacoes: rascunho.anotacoes,
-      proxima_acao_em: rascunho.proxima_acao_em,
-    })
+    const { error } = await supabase
+      .from('leads')
+      .update({
+        status: rascunho.status,
+        temperatura: rascunho.temperatura,
+        preferencias: rascunho.preferencias,
+        anotacoes: rascunho.anotacoes,
+        proxima_acao_em: rascunho.proxima_acao_em,
+        ultima_interacao_em: new Date().toISOString(),
+      })
+      .eq('id', id)
+    if (error) {
+      alert('Erro ao salvar lead: ' + error.message)
+      return
+    }
+    await carregarLeads(mostrarArquivados)
     setExpandido(null)
   }
 

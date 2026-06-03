@@ -11,6 +11,9 @@ function getSupabase() {
   }
 
   const supabaseKey = supabaseServiceRoleKey || supabaseAnonKey!
+  if (!supabaseServiceRoleKey) {
+    console.warn("[leads/route] AVISO: SUPABASE_SERVICE_ROLE_KEY não definida. Usando chave anon — RLS pode bloquear INSERTs de leads.")
+  }
 
   return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },

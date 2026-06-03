@@ -29,12 +29,14 @@ export default function ImoveisAdmin() {
   }
 
   async function toggleAtivo(id: string, ativo: boolean) {
-    await supabase.from('imoveis').update({ ativo: !ativo }).eq('id', id)
+    const { error } = await supabase.from('imoveis').update({ ativo: !ativo }).eq('id', id)
+    if (error) { alert('Erro ao alterar status: ' + error.message); return }
     carregarImoveis()
   }
 
   async function toggleDestaque(id: string, destaque: boolean) {
-    await supabase.from('imoveis').update({ destaque: !destaque }).eq('id', id)
+    const { error } = await supabase.from('imoveis').update({ destaque: !destaque }).eq('id', id)
+    if (error) { alert('Erro ao alterar destaque: ' + error.message); return }
     carregarImoveis()
   }
 

@@ -4,11 +4,14 @@ import LogoutButton from '@/components/LogoutButton'
 
 export default async function Dashboard() {
   const supabase = await createClient()
-  const [{ count: totalImoveis }, { count: imoveisAtivos }, { data: leads }] = await Promise.all([
+  const results = await Promise.allSettled([
     supabase.from('imoveis').select('*', { count: 'exact', head: true }),
     supabase.from('imoveis').select('*', { count: 'exact', head: true }).eq('ativo', true),
     supabase.from('leads').select('status'),
   ])
+  const totalImoveis = results[0].status === 'fulfilled' ? (results[0].value as any).count : 0
+  const imoveisAtivos = results[1].status === 'fulfilled' ? (results[1].value as any).count : 0
+  const leads: { status: string }[] = results[2].status === 'fulfilled' ? (results[2].value as any).data ?? [] : []
   const leadsNovos = (leads || []).filter(l => l.status === 'novo').length
   const totalLeads = (leads || []).length
 
