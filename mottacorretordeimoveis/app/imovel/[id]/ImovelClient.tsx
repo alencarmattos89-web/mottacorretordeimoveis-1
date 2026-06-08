@@ -94,7 +94,7 @@ export default function ImovelClient({ id: idProp, imovelInicial }: { id?: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: dados.nome || form.nome || 'Lead via WhatsApp',
-        telefone: dados.telefone || form.telefone || 'Não informado',
+        telefone: dados.telefone || form.telefone || '',
         email: dados.email || form.email || null,
         imovel_id: imovel.id,
         imovel_titulo: imovel.titulo,
