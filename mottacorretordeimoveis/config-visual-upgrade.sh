@@ -1,3 +1,64 @@
+#!/usr/bin/env bash
+# =============================================================================
+# MOTTA CORRETOR — CONFIGURAÇÕES VISUAIS AVANÇADAS
+# Gerado em: 2026-06-09
+#
+# O QUE ESTE SCRIPT FAZ:
+#   1. Migration: adiciona colunas novas na tabela configuracoes
+#   2. page.tsx: conecta as novas variáveis visuais ao site
+#   3. configuracoes/page.tsx: adiciona os controles no painel admin
+#
+# COMO USAR:
+#   cd /workspaces/mottacorretordeimoveis-1/mottacorretordeimoveis
+#   bash config-visual-upgrade.sh
+# =============================================================================
+
+set -e
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  MOTTA — Configurações visuais avançadas"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. MIGRATION: novas colunas na tabela configuracoes
+# ─────────────────────────────────────────────────────────────────────────────
+echo "→ [1/4] Criando migration para novas colunas..."
+
+mkdir -p supabase/migrations
+
+cat > supabase/migrations/20260609000000_config_visual_avancado.sql << 'SQL'
+-- Configurações visuais avançadas: hero, logo, fontes, cores globais
+
+alter table public.configuracoes
+  add column if not exists hero_altura           integer default 430,
+  add column if not exists hero_overlay_opacidade integer default 58,
+  add column if not exists logo_url              text    default '',
+  add column if not exists cor_destaque          text    default '#c9a84c',
+  add column if not exists cor_fundo             text    default '#0a0a0a',
+  add column if not exists fonte_titulo          text    default 'Georgia, serif',
+  add column if not exists fonte_corpo           text    default 'system-ui, sans-serif';
+
+update public.configuracoes set
+  hero_altura            = coalesce(hero_altura,            430),
+  hero_overlay_opacidade = coalesce(hero_overlay_opacidade, 58),
+  logo_url               = coalesce(logo_url,               ''),
+  cor_destaque           = coalesce(cor_destaque,           '#c9a84c'),
+  cor_fundo              = coalesce(cor_fundo,              '#0a0a0a'),
+  fonte_titulo           = coalesce(fonte_titulo,           'Georgia, serif'),
+  fonte_corpo            = coalesce(fonte_corpo,            'system-ui, sans-serif')
+where id = 'site';
+SQL
+
+echo "   ✓ supabase/migrations/20260609000000_config_visual_avancado.sql"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. page.tsx: conecta as novas variáveis ao site
+# ─────────────────────────────────────────────────────────────────────────────
+echo "→ [2/4] Atualizando app/page.tsx com as novas variáveis..."
+
+cat > app/page.tsx << 'TYPESCRIPT'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import CardImovel from '@/components/CardImovel'
@@ -286,3 +347,251 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
     </main>
   )
 }
+TYPESCRIPT
+
+echo "   ✓ app/page.tsx (hero_altura, overlay, logo, cor_destaque, fontes)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. configuracoes/page.tsx: adiciona aba "Visual" com os novos controles
+# ─────────────────────────────────────────────────────────────────────────────
+echo "→ [3/4] Atualizando painel de configurações com aba Visual..."
+
+python3 - << 'PYEOF'
+path = "app/admin/configuracoes/page.tsx"
+with open(path, "r") as f:
+    content = f.read()
+
+# 1. Adiciona 'Visual' nas abas
+content = content.replace(
+    "const abas = ['Hero', 'Banners', \"Marca d'água\", 'Imóveis', 'Geral']",
+    "const abas = ['Hero', 'Banners', \"Marca d'água\", 'Imóveis', 'Visual', 'Geral']"
+)
+
+# 2. Adiciona os novos campos no tipo SiteConfig
+content = content.replace(
+    "  rodape_texto: string\n}",
+    """  rodape_texto: string
+  hero_altura: number
+  hero_overlay_opacidade: number
+  logo_url: string
+  cor_destaque: string
+  cor_fundo: string
+  fonte_titulo: string
+  fonte_corpo: string
+}"""
+)
+
+# 3. Adiciona os valores padrão no configPadrao
+content = content.replace(
+    "  rodape_texto: '',\n}",
+    """  rodape_texto: '',
+  hero_altura: 430,
+  hero_overlay_opacidade: 58,
+  logo_url: '',
+  cor_destaque: '#c9a84c',
+  cor_fundo: '#0a0a0a',
+  fonte_titulo: 'Georgia, serif',
+  fonte_corpo: 'system-ui, sans-serif',
+}"""
+)
+
+# 4. Adiciona normalização dos novos campos em normalizarConfig
+content = content.replace(
+    "    watermark_margem: Number(data?.watermark_margem || configPadrao.watermark_margem),\n  }",
+    """    watermark_margem: Number(data?.watermark_margem || configPadrao.watermark_margem),
+    hero_altura: Number(data?.hero_altura || configPadrao.hero_altura),
+    hero_overlay_opacidade: Number(data?.hero_overlay_opacidade ?? configPadrao.hero_overlay_opacidade),
+    logo_url: String(data?.logo_url || ''),
+    cor_destaque: String(data?.cor_destaque || configPadrao.cor_destaque),
+    cor_fundo: String(data?.cor_fundo || configPadrao.cor_fundo),
+    fonte_titulo: String(data?.fonte_titulo || configPadrao.fonte_titulo),
+    fonte_corpo: String(data?.fonte_corpo || configPadrao.fonte_corpo),
+  }"""
+)
+
+# 5. Adiciona normalização no payload do salvar()
+content = content.replace(
+    "      watermark_margem: Number(config.watermark_margem) || configPadrao.watermark_margem,\n    }",
+    """      watermark_margem: Number(config.watermark_margem) || configPadrao.watermark_margem,
+      hero_altura: Number(config.hero_altura) || configPadrao.hero_altura,
+      hero_overlay_opacidade: Number(config.hero_overlay_opacidade) ?? configPadrao.hero_overlay_opacidade,
+      logo_url: config.logo_url || '',
+      cor_destaque: config.cor_destaque || configPadrao.cor_destaque,
+      cor_fundo: config.cor_fundo || configPadrao.cor_fundo,
+      fonte_titulo: config.fonte_titulo || configPadrao.fonte_titulo,
+      fonte_corpo: config.fonte_corpo || configPadrao.fonte_corpo,
+    }"""
+)
+
+# 6. Adiciona função de upload de logo após uploadWatermark
+upload_watermark_end = """    setUploadando('')
+    event.target.value = ''
+  }
+
+  async function uploadBanners"""
+
+new_upload_logo = """    setUploadando('')
+    event.target.value = ''
+  }
+
+  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setErro('')
+    setUploadando('logo')
+    const url = await uploadArquivo(file, 'logo')
+    if (url) setConfig((atual) => ({ ...atual, logo_url: url }))
+    setUploadando('')
+    event.target.value = ''
+  }
+
+  async function uploadBanners"""
+
+content = content.replace(upload_watermark_end, new_upload_logo)
+
+# 7. Insere a aba Visual antes de {abaAtiva === 'Geral'
+aba_visual = """        {abaAtiva === 'Visual' && (
+          <div style={{ display: 'grid', gap: '20px' }}>
+
+            {/* LOGO */}
+            <div style={card}>
+              <label style={lbl}>Logo do site (header e rodapé)</label>
+              <p style={{ color: '#6b6355', fontSize: '12px', marginBottom: '12px' }}>
+                Substitui a logo atual em todas as páginas. Use PNG com fundo transparente, preferencialmente horizontal.
+              </p>
+              {config.logo_url && (
+                <div style={{ marginBottom: '12px', height: '80px', display: 'flex', alignItems: 'center', background: '#070706', border: '1px solid rgba(201,168,76,0.14)', padding: '12px' }}>
+                  <img src={config.logo_url} alt="Logo atual" style={{ maxHeight: '100%', maxWidth: '280px', objectFit: 'contain' }} />
+                  <button type="button" onClick={() => setConfig(a => ({ ...a, logo_url: '' }))} style={{ marginLeft: 'auto', background: 'rgba(192,57,43,0.12)', border: '1px solid rgba(192,57,43,0.35)', color: '#ff8a7a', padding: '6px 10px', fontSize: '11px', cursor: 'pointer' }}>Remover</button>
+                </div>
+              )}
+              <input type="file" accept="image/*" onChange={uploadLogo} style={{ ...inp, padding: '8px' }} />
+              {uploadando === 'logo' && <p style={{ color: '#c9a84c', fontSize: '12px', marginTop: '6px' }}>Enviando logo...</p>}
+            </div>
+
+            {/* HERO */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Seção principal (Hero)</p>
+              <div style={{ display: 'grid', gap: '18px' }}>
+                <div>
+                  <label style={lbl}>Altura do Hero — {config.hero_altura}px</label>
+                  <input type="range" name="hero_altura" value={config.hero_altura} onChange={handleChange} min={200} max={900} step={10} style={{ width: '100%', marginBottom: '6px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#4a4438' }}>
+                    <span>200px (compacto)</span><span>430px (padrão)</span><span>900px (tela cheia)</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={lbl}>Escurecimento sobre a foto — {config.hero_overlay_opacidade}%</label>
+                  <input type="range" name="hero_overlay_opacidade" value={config.hero_overlay_opacidade} onChange={handleChange} min={0} max={90} step={1} style={{ width: '100%', marginBottom: '6px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#4a4438' }}>
+                    <span>0% (foto clara)</span><span>58% (padrão)</span><span>90% (quase escuro)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CORES */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Cores globais</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={lbl}>Cor de destaque (botões, links, dourado)</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="color" name="cor_destaque" value={config.cor_destaque} onChange={handleChange} style={{ ...inp, padding: '4px', height: '42px', flex: '0 0 56px' }} />
+                    <input type="text" name="cor_destaque" value={config.cor_destaque} onChange={handleChange} placeholder="#c9a84c" style={{ ...inp, flex: 1 }} />
+                  </div>
+                  <div style={{ marginTop: '8px', height: '28px', background: config.cor_destaque, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#0a0a0a', fontWeight: 700, letterSpacing: '1px' }}>PRÉVIA DA COR</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={lbl}>Cor de fundo do site</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="color" name="cor_fundo" value={config.cor_fundo} onChange={handleChange} style={{ ...inp, padding: '4px', height: '42px', flex: '0 0 56px' }} />
+                    <input type="text" name="cor_fundo" value={config.cor_fundo} onChange={handleChange} placeholder="#0a0a0a" style={{ ...inp, flex: 1 }} />
+                  </div>
+                  <div style={{ marginTop: '8px', height: '28px', background: config.cor_fundo, border: '1px solid rgba(201,168,76,0.2)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#e8e0d0', fontWeight: 700, letterSpacing: '1px' }}>PRÉVIA DO FUNDO</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FONTES */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Tipografia</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={lbl}>Fonte dos títulos</label>
+                  <select name="fonte_titulo" value={config.fonte_titulo} onChange={handleChange} style={inp}>
+                    <option value="Georgia, serif">Georgia (clássica, padrão)</option>
+                    <option value="'Playfair Display', Georgia, serif">Playfair Display (elegante)</option>
+                    <option value="'Cormorant Garamond', Georgia, serif">Cormorant Garamond (refinada)</option>
+                    <option value="'Montserrat', system-ui, sans-serif">Montserrat (moderna)</option>
+                    <option value="'Raleway', system-ui, sans-serif">Raleway (clean)</option>
+                    <option value="system-ui, sans-serif">System UI (sem serifa)</option>
+                  </select>
+                  <p style={{ marginTop: '10px', fontSize: '22px', fontFamily: config.fonte_titulo, color: '#e8e0d0', fontWeight: 300 }}>
+                    Imóveis de alto padrão
+                  </p>
+                </div>
+                <div>
+                  <label style={lbl}>Fonte do corpo do texto</label>
+                  <select name="fonte_corpo" value={config.fonte_corpo} onChange={handleChange} style={inp}>
+                    <option value="system-ui, sans-serif">System UI (padrão do sistema)</option>
+                    <option value="'Inter', system-ui, sans-serif">Inter (moderna, legível)</option>
+                    <option value="'Lato', system-ui, sans-serif">Lato (clean)</option>
+                    <option value="'Open Sans', system-ui, sans-serif">Open Sans (neutra)</option>
+                    <option value="Georgia, serif">Georgia (serifada)</option>
+                  </select>
+                  <p style={{ marginTop: '10px', fontSize: '14px', fontFamily: config.fonte_corpo, color: '#a09880', lineHeight: 1.6 }}>
+                    Cruz Alta e Região · Venda · Aluguel · Consultoria
+                  </p>
+                </div>
+              </div>
+              <p style={{ marginTop: '12px', fontSize: '11px', color: '#4a4438' }}>
+                ⚠ Fontes como Playfair Display, Montserrat e Inter precisam ser carregadas pelo Google Fonts. Se a fonte não aparecer no site, me avise para adicionar o import.
+              </p>
+            </div>
+
+          </div>
+        )}
+
+        """
+
+content = content.replace(
+    "        {abaAtiva === 'Geral' && (",
+    aba_visual + "        {abaAtiva === 'Geral' && ("
+)
+
+with open(path, "w") as f:
+    f.write(content)
+
+print("   ✓ app/admin/configuracoes/page.tsx (aba Visual adicionada)")
+PYEOF
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Commit e push
+# ─────────────────────────────────────────────────────────────────────────────
+echo "→ [4/4] Commit e push..."
+
+git add -A
+git commit -m "feat(config): aba Visual — logo, altura hero, overlay, cor destaque, fundo, fontes"
+git push
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✅  Concluído!"
+echo ""
+echo "  PASSO OBRIGATÓRIO — rodar no Supabase SQL Editor:"
+echo "  supabase/migrations/20260609000000_config_visual_avancado.sql"
+echo ""
+echo "  DEPOIS disso, em Admin → Configurações → aba 'Visual':"
+echo "  ✓ Upload da logo"
+echo "  ✓ Altura do Hero (slider)"
+echo "  ✓ Escurecimento sobre a foto (slider)"
+echo "  ✓ Cor de destaque com prévia ao vivo"
+echo "  ✓ Cor de fundo"
+echo "  ✓ Fonte dos títulos com prévia ao vivo"
+echo "  ✓ Fonte do corpo do texto com prévia ao vivo"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

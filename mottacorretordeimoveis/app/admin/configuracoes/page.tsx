@@ -35,6 +35,13 @@ type SiteConfig = {
   creci: string
   cidade: string
   rodape_texto: string
+  hero_altura: number
+  hero_overlay_opacidade: number
+  logo_url: string
+  cor_destaque: string
+  cor_fundo: string
+  fonte_titulo: string
+  fonte_corpo: string
 }
 
 const abas = ['Hero', 'Banners', 'Marca d\'água', 'Imóveis', 'Geral']
@@ -69,6 +76,13 @@ const configPadrao: SiteConfig = {
   creci: '12.857',
   cidade: 'Cruz Alta — RS',
   rodape_texto: '',
+  hero_altura: 430,
+  hero_overlay_opacidade: 58,
+  logo_url: '',
+  cor_destaque: '#c9a84c',
+  cor_fundo: '#0a0a0a',
+  fonte_titulo: 'Georgia, serif',
+  fonte_corpo: 'system-ui, sans-serif',
 }
 
 function normalizarConfig(data: Partial<SiteConfig> | null | undefined): SiteConfig {
@@ -84,6 +98,13 @@ function normalizarConfig(data: Partial<SiteConfig> | null | undefined): SiteCon
     watermark_opacidade: Number(data?.watermark_opacidade || configPadrao.watermark_opacidade),
     watermark_tamanho: Number(data?.watermark_tamanho || configPadrao.watermark_tamanho),
     watermark_margem: Number(data?.watermark_margem || configPadrao.watermark_margem),
+    hero_altura: Number(data?.hero_altura || configPadrao.hero_altura),
+    hero_overlay_opacidade: Number(data?.hero_overlay_opacidade ?? configPadrao.hero_overlay_opacidade),
+    logo_url: String(data?.logo_url || ''),
+    cor_destaque: String(data?.cor_destaque || configPadrao.cor_destaque),
+    cor_fundo: String(data?.cor_fundo || configPadrao.cor_fundo),
+    fonte_titulo: String(data?.fonte_titulo || configPadrao.fonte_titulo),
+    fonte_corpo: String(data?.fonte_corpo || configPadrao.fonte_corpo),
   }
 }
 
@@ -169,6 +190,17 @@ export default function ConfiguracoesAdmin() {
     event.target.value = ''
   }
 
+  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setErro('')
+    setUploadando('logo')
+    const url = await uploadArquivo(file, 'logo')
+    if (url) setConfig((atual) => ({ ...atual, logo_url: url }))
+    setUploadando('')
+    event.target.value = ''
+  }
+
   async function uploadBanners(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
@@ -217,6 +249,13 @@ export default function ConfiguracoesAdmin() {
       watermark_opacidade: Number(config.watermark_opacidade) || configPadrao.watermark_opacidade,
       watermark_tamanho: Number(config.watermark_tamanho) || configPadrao.watermark_tamanho,
       watermark_margem: Number(config.watermark_margem) || configPadrao.watermark_margem,
+      hero_altura: Number(config.hero_altura) || configPadrao.hero_altura,
+      hero_overlay_opacidade: Number(config.hero_overlay_opacidade) ?? configPadrao.hero_overlay_opacidade,
+      logo_url: config.logo_url || '',
+      cor_destaque: config.cor_destaque || configPadrao.cor_destaque,
+      cor_fundo: config.cor_fundo || configPadrao.cor_fundo,
+      fonte_titulo: config.fonte_titulo || configPadrao.fonte_titulo,
+      fonte_corpo: config.fonte_corpo || configPadrao.fonte_corpo,
     }
 
     const { error } = await supabase.from('configuracoes').upsert(payload)
@@ -459,7 +498,114 @@ export default function ConfiguracoesAdmin() {
           </div>
         )}
 
-        {abaAtiva === 'Geral' && (
+        {abaAtiva === 'Visual' && (
+          <div style={{ display: 'grid', gap: '20px' }}>
+
+            {/* LOGO */}
+            <div style={card}>
+              <label style={lbl}>Logo do site (header e rodapé)</label>
+              <p style={{ color: '#6b6355', fontSize: '12px', marginBottom: '12px' }}>
+                Substitui a logo atual em todas as páginas. Use PNG com fundo transparente, preferencialmente horizontal.
+              </p>
+              {config.logo_url && (
+                <div style={{ marginBottom: '12px', height: '80px', display: 'flex', alignItems: 'center', background: '#070706', border: '1px solid rgba(201,168,76,0.14)', padding: '12px' }}>
+                  <img src={config.logo_url} alt="Logo atual" style={{ maxHeight: '100%', maxWidth: '280px', objectFit: 'contain' }} />
+                  <button type="button" onClick={() => setConfig(a => ({ ...a, logo_url: '' }))} style={{ marginLeft: 'auto', background: 'rgba(192,57,43,0.12)', border: '1px solid rgba(192,57,43,0.35)', color: '#ff8a7a', padding: '6px 10px', fontSize: '11px', cursor: 'pointer' }}>Remover</button>
+                </div>
+              )}
+              <input type="file" accept="image/*" onChange={uploadLogo} style={{ ...inp, padding: '8px' }} />
+              {uploadando === 'logo' && <p style={{ color: '#c9a84c', fontSize: '12px', marginTop: '6px' }}>Enviando logo...</p>}
+            </div>
+
+            {/* HERO */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Seção principal (Hero)</p>
+              <div style={{ display: 'grid', gap: '18px' }}>
+                <div>
+                  <label style={lbl}>Altura do Hero — {config.hero_altura}px</label>
+                  <input type="range" name="hero_altura" value={config.hero_altura} onChange={handleChange} min={200} max={900} step={10} style={{ width: '100%', marginBottom: '6px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#4a4438' }}>
+                    <span>200px (compacto)</span><span>430px (padrão)</span><span>900px (tela cheia)</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={lbl}>Escurecimento sobre a foto — {config.hero_overlay_opacidade}%</label>
+                  <input type="range" name="hero_overlay_opacidade" value={config.hero_overlay_opacidade} onChange={handleChange} min={0} max={90} step={1} style={{ width: '100%', marginBottom: '6px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#4a4438' }}>
+                    <span>0% (foto clara)</span><span>58% (padrão)</span><span>90% (quase escuro)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CORES */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Cores globais</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={lbl}>Cor de destaque (botões, links, dourado)</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="color" name="cor_destaque" value={config.cor_destaque} onChange={handleChange} style={{ ...inp, padding: '4px', height: '42px', flex: '0 0 56px' }} />
+                    <input type="text" name="cor_destaque" value={config.cor_destaque} onChange={handleChange} placeholder="#c9a84c" style={{ ...inp, flex: 1 }} />
+                  </div>
+                  <div style={{ marginTop: '8px', height: '28px', background: config.cor_destaque, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#0a0a0a', fontWeight: 700, letterSpacing: '1px' }}>PRÉVIA DA COR</span>
+                  </div>
+                </div>
+                <div>
+                  <label style={lbl}>Cor de fundo do site</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="color" name="cor_fundo" value={config.cor_fundo} onChange={handleChange} style={{ ...inp, padding: '4px', height: '42px', flex: '0 0 56px' }} />
+                    <input type="text" name="cor_fundo" value={config.cor_fundo} onChange={handleChange} placeholder="#0a0a0a" style={{ ...inp, flex: 1 }} />
+                  </div>
+                  <div style={{ marginTop: '8px', height: '28px', background: config.cor_fundo, border: '1px solid rgba(201,168,76,0.2)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#e8e0d0', fontWeight: 700, letterSpacing: '1px' }}>PRÉVIA DO FUNDO</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FONTES */}
+            <div style={card}>
+              <p style={{ color: '#e8e0d0', fontSize: '14px', marginBottom: '18px', fontWeight: 500 }}>Tipografia</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={lbl}>Fonte dos títulos</label>
+                  <select name="fonte_titulo" value={config.fonte_titulo} onChange={handleChange} style={inp}>
+                    <option value="Georgia, serif">Georgia (clássica, padrão)</option>
+                    <option value="'Playfair Display', Georgia, serif">Playfair Display (elegante)</option>
+                    <option value="'Cormorant Garamond', Georgia, serif">Cormorant Garamond (refinada)</option>
+                    <option value="'Montserrat', system-ui, sans-serif">Montserrat (moderna)</option>
+                    <option value="'Raleway', system-ui, sans-serif">Raleway (clean)</option>
+                    <option value="system-ui, sans-serif">System UI (sem serifa)</option>
+                  </select>
+                  <p style={{ marginTop: '10px', fontSize: '22px', fontFamily: config.fonte_titulo, color: '#e8e0d0', fontWeight: 300 }}>
+                    Imóveis de alto padrão
+                  </p>
+                </div>
+                <div>
+                  <label style={lbl}>Fonte do corpo do texto</label>
+                  <select name="fonte_corpo" value={config.fonte_corpo} onChange={handleChange} style={inp}>
+                    <option value="system-ui, sans-serif">System UI (padrão do sistema)</option>
+                    <option value="'Inter', system-ui, sans-serif">Inter (moderna, legível)</option>
+                    <option value="'Lato', system-ui, sans-serif">Lato (clean)</option>
+                    <option value="'Open Sans', system-ui, sans-serif">Open Sans (neutra)</option>
+                    <option value="Georgia, serif">Georgia (serifada)</option>
+                  </select>
+                  <p style={{ marginTop: '10px', fontSize: '14px', fontFamily: config.fonte_corpo, color: '#a09880', lineHeight: 1.6 }}>
+                    Cruz Alta e Região · Venda · Aluguel · Consultoria
+                  </p>
+                </div>
+              </div>
+              <p style={{ marginTop: '12px', fontSize: '11px', color: '#4a4438' }}>
+                ⚠ Fontes como Playfair Display, Montserrat e Inter precisam ser carregadas pelo Google Fonts. Se a fonte não aparecer no site, me avise para adicionar o import.
+              </p>
+            </div>
+
+          </div>
+        )}
+
+                {abaAtiva === 'Geral' && (
           <div style={{ display: 'grid', gap: '20px' }}>
             <div>
               <label style={lbl}>Número do WhatsApp</label>
