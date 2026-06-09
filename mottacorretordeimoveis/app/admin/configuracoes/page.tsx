@@ -201,6 +201,7 @@ export default function ConfiguracoesAdmin() {
     event.target.value = ''
   }
 
+  async function uploadBanners(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
     setErro('')
