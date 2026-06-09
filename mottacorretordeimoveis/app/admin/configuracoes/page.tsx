@@ -1,3 +1,4 @@
+
 'use client'
 
 import { supabase } from '@/lib/supabase-browser'
@@ -44,7 +45,7 @@ type SiteConfig = {
   fonte_corpo: string
 }
 
-const abas = ['Hero', 'Banners', 'Marca d\'água', 'Imóveis', 'Geral']
+const abas = ['Hero', 'Banners', "Marca d'água", 'Imóveis', 'Visual', 'Geral']
 
 const configPadrao: SiteConfig = {
   id: 'site',
