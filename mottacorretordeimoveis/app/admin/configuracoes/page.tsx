@@ -201,18 +201,6 @@ export default function ConfiguracoesAdmin() {
     event.target.value = ''
   }
 
-  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setErro('')
-    setUploadando('logo')
-    const url = await uploadArquivo(file, 'logo')
-    if (url) setConfig((atual) => ({ ...atual, logo_url: url }))
-    setUploadando('')
-    event.target.value = ''
-  }
-
-  async function uploadBanners(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
     setErro('')
