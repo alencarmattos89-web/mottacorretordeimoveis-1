@@ -11,18 +11,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-// Usa as MESMAS variáveis de ambiente que o resto do site já usa.
-// Se os nomes forem diferentes no teu projeto, ajusta aqui.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // service role p/ não bater em RLS
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 const SITE_URL = "https://mottacorretordeimoveis.com.br";
 
-// Mapeia a categoria do teu banco para os valores que o Facebook aceita.
-// Valores permitidos pelo Facebook: apartment, builder_floor, condo, house,
-// house_in_condominium, house_in_villa, loft, other, penthouse, studio, townhouse
 function mapPropertyType(categoria: string): string {
   const map: Record<string, string> = {
     casa: "house",
@@ -46,6 +41,30 @@ function escapeXml(value: string | number | null | undefined): string {
     .replace(/'/g, "&apos;");
 }
 
+// Remove resíduos de LaTeX (ex: "$113 \text{ m}^2$") que às vezes entram
+// na descrição quando o texto é colado de outra ferramenta (Word, ChatGPT etc).
+function cleanDescription(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/\\text\{[^}]*\}/g, "") // remove \text{...}
+    .replace(/\$[^$]*\$/g, (match) => match.replace(/[$\\]/g, "")) // remove $ e barras dentro de blocos $...$
+    .replace(/\\[a-zA-Z]+/g, "") // remove outros comandos LaTeX tipo \frac, \cdot etc
+    .replace(/\s{2,}/g, " ") // limpa espaços duplos deixados pela remoção
+    .trim();
+}
+
+// Monta o endereço com fallback: usa o endereço completo se existir,
+// senão junta bairro + cidade (melhor que mandar vazio pro Facebook).
+function resolveAddr1(imovel: any): string {
+  if (imovel.endereco && imovel.endereco.trim() !== "") {
+    return imovel.endereco;
+  }
+  if (imovel.bairro && imovel.bairro.trim() !== "") {
+    return `${imovel.bairro}, ${imovel.cidade || "Cruz Alta"}`;
+  }
+  return imovel.cidade || "Cruz Alta";
+}
+
 export async function GET() {
   const { data: imoveis, error } = await supabase
     .from("imoveis")
@@ -65,9 +84,6 @@ export async function GET() {
       const listingType = isVenda ? "for_sale_by_agent" : "for_rent_by_agent";
       const propertyType = mapPropertyType(imovel.categoria);
 
-      // Preço: só inclui se mostrar_preco for true e preco existir.
-      // Facebook exige price; se o corretor esconder o preço, usamos "0 BRL"
-      // como placeholder — o ideal é sempre ter um preço real no feed.
       const price = imovel.mostrar_preco && imovel.preco
         ? `${imovel.preco} BRL`
         : `${imovel.preco ?? 0} BRL`;
@@ -77,28 +93,34 @@ export async function GET() {
         .join("\n");
 
       const numBaths = imovel.banheiros && imovel.banheiros > 0 ? imovel.banheiros : 1;
+      const addr1 = resolveAddr1(imovel);
+      const description = cleanDescription(imovel.descricao) || escapeXml(imovel.titulo);
+
+      // Só inclui area_size/area_unit se a área realmente existir.
+      // Campo vazio é pior que campo ausente — o Facebook rejeita <area_size></area_size>.
+      const areaFields = imovel.area
+        ? `      <area_size>${imovel.area}</area_size>\n      <area_unit>sq_m</area_unit>\n`
+        : "";
 
       return `    <listing>
       <home_listing_id>${escapeXml(imovel.id)}</home_listing_id>
       <name>${escapeXml(imovel.titulo)}</name>
-      <description>${escapeXml(imovel.descricao || imovel.titulo)}</description>
+      <description>${escapeXml(description)}</description>
       <availability>${availability}</availability>
       <listing_type>${listingType}</listing_type>
       <property_type>${propertyType}</property_type>
       <price>${price}</price>
       <address format="simple">
-        <component name="addr1">${escapeXml(imovel.endereco || imovel.bairro || "")}</component>
+        <component name="addr1">${escapeXml(addr1)}</component>
         <component name="city">${escapeXml(imovel.cidade || "Cruz Alta")}</component>
         <component name="region">Rio Grande do Sul</component>
         <component name="country">Brazil</component>
       </address>
-      <neighborhood>${escapeXml(imovel.bairro)}</neighborhood>
+      <neighborhood>${escapeXml(imovel.bairro || imovel.cidade || "Cruz Alta")}</neighborhood>
 ${images}
       <num_beds>${imovel.quartos ?? 0}</num_beds>
       <num_baths>${numBaths}</num_baths>
-      <area_size>${imovel.area ?? ""}</area_size>
-      <area_unit>sq_m</area_unit>
-      <url>${SITE_URL}/imovel/${imovel.id}</url>
+${areaFields}      <url>${SITE_URL}/imovel/${imovel.id}</url>
     </listing>`;
     })
     .join("\n");
@@ -117,3 +139,4 @@ ${items}
     },
   });
 }
+
